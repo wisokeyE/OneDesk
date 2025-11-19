@@ -6,9 +6,9 @@ using OneDesk.Models;
 
 namespace OneDesk.Services.Auth;
 
-public partial class UserInfoManager : ObservableObject
+public partial class UserInfoManager : ObservableObject, IUserInfoManager
 {
-    private readonly List<string> _files;
+    private readonly List<string> _filePaths;
 
     private static AppConfig _config = null!;
 
@@ -37,7 +37,7 @@ public partial class UserInfoManager : ObservableObject
             Directory.CreateDirectory(credentialFolderPath);
         }
         // 读取目录，获取所有的user*.json文件
-        _files = Directory.GetFiles(credentialFolderPath, "user*.json")
+        _filePaths = Directory.GetFiles(credentialFolderPath, "user*.json")
             .OrderBy(f => f)
             .ToList();
         UserInfos = new ReadOnlyObservableCollection<UserInfo>(_userInfos);
@@ -47,11 +47,11 @@ public partial class UserInfoManager : ObservableObject
     private void Initialize()
     {
         UserInfo? activatedUserinfo = null;
-        foreach (var file in _files)
+        foreach (var filePath in _filePaths)
         {
-            var userinfo = BuildUserInfo(file);
+            var userinfo = BuildUserInfo(filePath);
             _userInfos.Add(userinfo);
-            if (userinfo.UserInfoFile == _config.ActivatedUserFile)
+            if (Path.GetFileName(userinfo.UserInfoFilePath) == _config.ActivatedUserFileName)
             {
                 activatedUserinfo = userinfo;
             }
@@ -75,12 +75,12 @@ public partial class UserInfoManager : ObservableObject
     {
         // 计算下一个文件名
         var file = "";
-        for (var i = 1; i <= _files.Count + 1; i++)
+        for (var i = 1; i <= _filePaths.Count + 1; i++)
         {
-            var filePath = Path.Combine(_config.CredentialFolderPath, "user" + i + ".json");
-            if (Path.Exists(filePath)) continue;
-            _files.Add(filePath);
-            file = filePath;
+            var tempFilePath = Path.Combine(_config.CredentialFolderPath, "user" + i + ".json");
+            if (Path.Exists(tempFilePath)) continue;
+            _filePaths.Add(tempFilePath);
+            file = tempFilePath;
             break;
         }
         if (string.IsNullOrWhiteSpace(file))
@@ -100,7 +100,7 @@ public partial class UserInfoManager : ObservableObject
         if (ActivatedUserInfo is null) return;
         var oldActivateUserInfo = ActivatedUserInfo;
         _userInfos.Remove(oldActivateUserInfo);
-        _files.Remove(oldActivateUserInfo.UserInfoFile);
+        _filePaths.Remove(oldActivateUserInfo.UserInfoFilePath);
         if (_userInfos.Count > 0)
         {
             ReplaceUserInfo(_userInfos.First());
@@ -109,26 +109,21 @@ public partial class UserInfoManager : ObservableObject
         {
             ActivatedUserInfo = null;
             ActivatedClient = null;
-            _config.ActivatedUserFile = null;
+            _config.ActivatedUserFileName = null;
         }
         // 清理对应的 file
-        if (Path.Exists(oldActivateUserInfo.UserInfoFile))
+        if (Path.Exists(oldActivateUserInfo.UserInfoFilePath))
         {
-            File.Delete(oldActivateUserInfo.UserInfoFile);
+            File.Delete(oldActivateUserInfo.UserInfoFilePath);
         }
         oldActivateUserInfo.Dispose();
     }
 
     private void ReplaceUserInfo(UserInfo userInfo)
     {
-        if (ActivatedUserInfo is not null)
-        {
-            ActivatedUserInfo.IsActivated = false;
-        }
         ActivatedUserInfo = userInfo;
-        ActivatedUserInfo.IsActivated = true;
         ActivatedClient = ActivatedUserInfo.Client;
-        _config.ActivatedUserFile = Path.GetFileName(ActivatedUserInfo.UserInfoFile);
+        _config.ActivatedUserFileName = Path.GetFileName(ActivatedUserInfo.UserInfoFilePath);
     }
 
     private static UserInfo BuildUserInfo(string filePath)

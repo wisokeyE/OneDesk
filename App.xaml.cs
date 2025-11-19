@@ -1,5 +1,4 @@
 ﻿using System.IO;
-using System.Reflection;
 using System.Windows.Threading;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -58,7 +57,7 @@ namespace OneDesk
                 services.AddSingleton<MainWindowViewModel>();
 
                 // User Info management
-                services.AddSingleton<UserInfoManager>();
+                services.AddSingleton<IUserInfoManager, UserInfoManager>();
 
                 services.AddSingleton<DashboardPage>();
                 services.AddSingleton<DashboardViewModel>();

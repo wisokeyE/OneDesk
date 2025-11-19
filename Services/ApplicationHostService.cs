@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using OneDesk.Services.Auth;
+﻿using Microsoft.Extensions.Hosting;
 using OneDesk.Services.Configuration;
 using OneDesk.Views.Windows;
 using Wpf.Ui;

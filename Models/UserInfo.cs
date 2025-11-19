@@ -16,9 +16,6 @@ public partial class UserInfo : ObservableObject, IDisposable
     private string _mail = "未知邮箱";
 
     [ObservableProperty]
-    private bool _isActivated;
-
-    [ObservableProperty]
     private string? _photoUrl;
 
     [ObservableProperty]
@@ -28,7 +25,7 @@ public partial class UserInfo : ObservableObject, IDisposable
     private BitmapImage? _photoBitmap;
 
     [ObservableProperty]
-    private string _userInfoFile;
+    private string _userInfoFilePath;
 
     [ObservableProperty]
     private bool _isInitialized;
@@ -41,7 +38,7 @@ public partial class UserInfo : ObservableObject, IDisposable
     {
         Client = client;
         Credential = credential;
-        UserInfoFile = filePath;
+        UserInfoFilePath = filePath;
         _ = InitUserInfoAsync();
     }
 

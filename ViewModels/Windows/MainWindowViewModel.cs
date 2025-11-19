@@ -1,6 +1,4 @@
 ﻿using System.Collections.ObjectModel;
-using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using OneDesk.Services.Auth;
 using Wpf.Ui.Controls;
 using MenuItem = Wpf.Ui.Controls.MenuItem;
@@ -13,7 +11,7 @@ namespace OneDesk.ViewModels.Windows
         private string _applicationTitle = "WPF UI - OneDesk";
 
         [ObservableProperty]
-        private UserInfoManager _userInfoManager;
+        private IUserInfoManager _userInfoManager;
 
         [ObservableProperty]
         private bool _popupIsOpen;
@@ -52,7 +50,7 @@ namespace OneDesk.ViewModels.Windows
             new MenuItem { Header = "Home", Tag = "tray_home" }
         };
 
-        public MainWindowViewModel(UserInfoManager userInfoManager)
+        public MainWindowViewModel(IUserInfoManager userInfoManager)
         {
             _userInfoManager = userInfoManager;
         }

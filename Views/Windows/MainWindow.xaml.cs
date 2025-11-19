@@ -1,9 +1,11 @@
-﻿using OneDesk.Models;
+﻿using System.Windows.Controls;
+using OneDesk.Models;
 using OneDesk.ViewModels.Windows;
 using Wpf.Ui;
 using Wpf.Ui.Abstractions;
 using Wpf.Ui.Appearance;
 using Wpf.Ui.Controls;
+using ListView = Wpf.Ui.Controls.ListView;
 
 namespace OneDesk.Views.Windows
 {
@@ -65,6 +67,23 @@ namespace OneDesk.Views.Windows
         public void SetServiceProvider(IServiceProvider serviceProvider)
         {
             throw new NotImplementedException();
+        }
+
+        public void OnSelectionChanged(object sender, SelectionChangedEventArgs args)
+        {
+            if (sender is not ListView userListView) return;
+            var userInfoManager = ViewModel.UserInfoManager;
+            if (userListView.SelectedItem is null)
+            {
+                if (userInfoManager.ActivatedUserInfo is not null)
+                {
+                    userListView.SelectedItem = userInfoManager.ActivatedUserInfo;
+                }
+            }
+            else
+            {
+                userInfoManager.ActiveClient(userListView.SelectedIndex);
+            }
         }
     }
 }

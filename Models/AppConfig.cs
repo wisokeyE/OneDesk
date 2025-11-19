@@ -13,14 +13,14 @@ public partial class AppConfig : ObservableObject
     [ObservableProperty]
     private string _credentialFolderPath = "users";
     [ObservableProperty]
-    private string? _activatedUserFile;
+    private string? _activatedUserFileName;
 
     partial void OnFollowSystemThemeChanged(bool value) => RaiseConfigChanged();
     partial void OnThemeChanged(string value) => RaiseConfigChanged();
     partial void OnClientIdChanged(string value) => RaiseConfigChanged();
     partial void OnTenantIdChanged(string? value) => RaiseConfigChanged();
     partial void OnCredentialFolderPathChanged(string value) => RaiseConfigChanged();
-    partial void OnActivatedUserFileChanged(string? value) => RaiseConfigChanged();
+    partial void OnActivatedUserFileNameChanged(string? value) => RaiseConfigChanged();
 
     public void CopyConfig(AppConfig config)
     {
@@ -29,6 +29,7 @@ public partial class AppConfig : ObservableObject
         ClientId = config.ClientId;
         TenantId = config.TenantId;
         CredentialFolderPath = config.CredentialFolderPath;
+        ActivatedUserFileName = config.ActivatedUserFileName;
     }
 
     // 用于通知外部“配置已修改”

@@ -100,6 +100,8 @@
                         </Border.Effect>
                         <StackPanel>
                             <ui:ListView
+                                SelectionChanged="OnSelectionChanged"
+                                SelectionMode="Single"
                                 SelectedItem="{Binding ViewModel.UserInfoManager.ActivatedUserInfo, Mode=OneWay}"
                                 ItemsSource="{Binding ViewModel.UserInfoManager.UserInfos, Mode=OneWay}">
                                 <ui:ListView.ItemTemplate>
@@ -152,7 +154,7 @@
                                     MouseOverBackground="#4CAF50"
                                     BorderBrush="#45A049"
                                     Foreground="White"
-                                    Margin="0,0,2,0"
+                                    Margin="0,4,2,0"
                                     Command="{Binding ViewModel.AddUserCommand, Mode=OneWay}"
                                     Content="登录新账号" />
                                 <ui:Button
@@ -162,7 +164,7 @@
                                     MouseOverBackground="#F44336"
                                     BorderBrush="#D32F2F"
                                     Foreground="White"
-                                    Margin="2,0,0,0"
+                                    Margin="2,4,0,0"
                                     Command="{Binding ViewModel.RemoveCurrentUserCommand, Mode=OneWay}"
                                     Content="注销当前账号" />
                             </Grid>
