@@ -1,5 +1,6 @@
 ﻿using System.Collections.ObjectModel;
 using System.IO;
+using System.Text.RegularExpressions;
 using Azure.Identity;
 using Microsoft.Graph;
 using OneDesk.Models;
@@ -21,8 +22,10 @@ public partial class UserInfoManager : ObservableObject, IUserInfoManager
     [ObservableProperty]
     private UserInfo? _activatedUserInfo;
 
-    [ObservableProperty]
-    private GraphServiceClient? _activatedClient;
+    public GraphServiceClient? ActivatedClient => ActivatedUserInfo?.Client;
+
+    [GeneratedRegex(@"^user\d+$")]
+    private static partial Regex UserFileNameRegex();
 
     public UserInfoManager(AppConfig config)
     {
@@ -38,7 +41,10 @@ public partial class UserInfoManager : ObservableObject, IUserInfoManager
         }
         // 读取目录，获取所有的user*.json文件
         _filePaths = Directory.GetFiles(credentialFolderPath, "user*.json")
-            .OrderBy(f => f)
+            .Select(f => new { FilePath = f, Name = Path.GetFileNameWithoutExtension(f) })
+            .Where(f => UserFileNameRegex().IsMatch(f.Name))
+            .OrderBy(f => int.Parse(f.Name[4..]))
+            .Select(f => f.FilePath)
             .ToList();
         UserInfos = new ReadOnlyObservableCollection<UserInfo>(_userInfos);
         Initialize();
@@ -99,18 +105,22 @@ public partial class UserInfoManager : ObservableObject, IUserInfoManager
     {
         if (ActivatedUserInfo is null) return;
         var oldActivateUserInfo = ActivatedUserInfo;
-        _userInfos.Remove(oldActivateUserInfo);
-        _filePaths.Remove(oldActivateUserInfo.UserInfoFilePath);
-        if (_userInfos.Count > 0)
+        // 先计算下一个要激活的 userinfo
+        // 如果用户数大于1，则判断当前激活的是不是第一个，是则激活第二个，否则激活第一个
+        // 如果用户数小于等于1，则删除后不激活任何用户
+        if (_userInfos.Count > 1)
         {
-            ReplaceUserInfo(_userInfos.First());
+            var newActivatedUserInfo = _userInfos[0] == oldActivateUserInfo ? _userInfos[1] : _userInfos[0];
+            ReplaceUserInfo(newActivatedUserInfo);
         }
         else
         {
             ActivatedUserInfo = null;
-            ActivatedClient = null;
             _config.ActivatedUserFileName = null;
         }
+        // 然后处理集合，以避免出现ActivatedUserInfo不在集合中的情况
+        _userInfos.Remove(oldActivateUserInfo);
+        _filePaths.Remove(oldActivateUserInfo.UserInfoFilePath);
         // 清理对应的 file
         if (Path.Exists(oldActivateUserInfo.UserInfoFilePath))
         {
@@ -122,7 +132,6 @@ public partial class UserInfoManager : ObservableObject, IUserInfoManager
     private void ReplaceUserInfo(UserInfo userInfo)
     {
         ActivatedUserInfo = userInfo;
-        ActivatedClient = ActivatedUserInfo.Client;
         _config.ActivatedUserFileName = Path.GetFileName(ActivatedUserInfo.UserInfoFilePath);
     }
 
