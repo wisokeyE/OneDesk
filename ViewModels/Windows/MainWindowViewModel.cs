@@ -21,6 +21,12 @@ namespace OneDesk.ViewModels.Windows
         {
             new NavigationViewItem()
             {
+                Content = "文件管理",
+                Icon = new SymbolIcon { Symbol = SymbolRegular.Cloud24 },
+                TargetPageType = typeof(Views.Pages.FileManagerPage)
+            },
+            new NavigationViewItem()
+            {
                 Content = "Home",
                 Icon = new SymbolIcon { Symbol = SymbolRegular.Home24 },
                 TargetPageType = typeof(Views.Pages.DashboardPage)

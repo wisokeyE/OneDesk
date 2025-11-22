@@ -28,24 +28,30 @@ public partial class UserInfo : ObservableObject, IDisposable
     private string _userInfoFilePath;
 
     [ObservableProperty]
+    private string? _driveId;
+
+    [ObservableProperty]
     private bool _isInitialized;
 
     public GraphServiceClient Client { get; private set; }
 
     public TokenCredential Credential { get; private set; }
 
+    public Task InitializationTask { get; }
+
     public UserInfo(GraphServiceClient client, TokenCredential credential, string filePath)
     {
         Client = client;
         Credential = credential;
         UserInfoFilePath = filePath;
-        _ = InitUserInfoAsync();
+        InitializationTask = InitUserInfoAsync();
     }
 
     private async Task InitUserInfoAsync()
     {
         var displayName = DisplayName;
         var mail = Mail;
+        var driveId = "";
         var isSvg = IsSvg;
         var photoUrl = PhotoUrl;
         var me = await Client.Me.GetAsync();
@@ -53,6 +59,12 @@ public partial class UserInfo : ObservableObject, IDisposable
         {
             displayName = me.DisplayName!;
             mail = me.Mail!;
+        }
+
+        var drive = await Client.Me.Drive.GetAsync();
+        if (drive is not null)
+        {
+            driveId = drive.Id;
         }
 
         try
@@ -76,6 +88,7 @@ public partial class UserInfo : ObservableObject, IDisposable
             // 在UI线程更新属性
             DisplayName = displayName;
             Mail = mail;
+            DriveId = driveId;
             IsSvg = isSvg;
             PhotoUrl = photoUrl;
         });

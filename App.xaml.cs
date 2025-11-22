@@ -59,6 +59,8 @@ namespace OneDesk
                 // User Info management
                 services.AddSingleton<IUserInfoManager, UserInfoManager>();
 
+                services.AddSingleton<FileManagerPage>();
+                services.AddSingleton<FileManagerViewModel>();
                 services.AddSingleton<DashboardPage>();
                 services.AddSingleton<DashboardViewModel>();
                 services.AddSingleton<DataPage>();
