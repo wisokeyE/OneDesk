@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.IO;
 using Microsoft.Graph;
 using Microsoft.Graph.Models;
 using OneDesk.Models;
@@ -7,41 +6,84 @@ using OneDesk.Services.Auth;
 
 namespace OneDesk.ViewModels.Pages;
 
-public partial class FileManagerViewModel(IUserInfoManager userInfoManager) : ObservableObject
+public partial class FileManagerViewModel : ObservableObject
 {
+    private static readonly Item RootItem = new("/", "/", null);
 
     [ObservableProperty]
     private ObservableCollection<DriveItem> _items = [];
 
     [ObservableProperty]
-    private ObservableCollection<Item> _breadcrumbItems = [new("/", "/", null)];
+    private ObservableCollection<Item> _breadcrumbItems = [RootItem];
+
+    [ObservableProperty]
+    private bool _isLoading;
+
+    private readonly IUserInfoManager _userInfoManager;
 
     public Item CurrentFolder => BreadcrumbItems[^1];
 
+    partial void OnBreadcrumbItemsChanged(ObservableCollection<Item> value)
+    {
+        OnPropertyChanged(nameof(CurrentFolder));
+    }
+
+    public FileManagerViewModel(IUserInfoManager userInfoManager)
+    {
+        _userInfoManager = userInfoManager;
+        BreadcrumbItems.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(CurrentFolder));
+        };
+        _userInfoManager.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(IUserInfoManager.ActivatedUserInfo))
+            {
+                BreadcrumbItems = [RootItem];
+                _ = GetCurrentPathChildren();
+            }
+        };
+    }
 
     public async Task GetCurrentPathChildren()
     {
-        var userInfo = userInfoManager.ActivatedUserInfo;
-        if (userInfo is null)
-        {
-            Items = [];
-            return;
-        }
-        if (!userInfo.IsInitialized)
-        {
-            await userInfo.InitializationTask; // Wait until user info (DriveId) initialized
-        }
-        var client = userInfo.Client;
-
+        _userInfoManager.IsLocked = true;
+        IsLoading = true;
         try
         {
-            var response = await GetItemChildrenByPath(client, userInfo.DriveId!, CurrentFolder.Path);
-            Items = response?.Value is { Count: > 0 } ? new ObservableCollection<DriveItem>(response.Value) : [];
+            var userInfo = _userInfoManager.ActivatedUserInfo;
+            if (userInfo is null)
+            {
+                Items = [];
+                return;
+            }
+            if (!userInfo.IsInitialized)
+            {
+                await userInfo.InitializationTask; // Wait until user info (DriveId) initialized
+            }
+            var client = userInfo.Client;
+
+            try
+            {
+                var response = await GetItemChildrenByPath(client, userInfo.DriveId!, CurrentFolder.Path);
+                Items = response?.Value is { Count: > 0 } ? new ObservableCollection<DriveItem>(response.Value) : [];
+            }
+            catch
+            {
+                Items = [];
+            }
         }
-        catch
+        finally
         {
-            Items = [];
+            IsLoading = false;
+            _userInfoManager.IsLocked = false;
         }
+    }
+
+    [RelayCommand]
+    private void OnRefresh()
+    {
+        _ = GetCurrentPathChildren();
     }
 
     [RelayCommand]

@@ -27,12 +27,6 @@ namespace OneDesk.ViewModels.Windows
             },
             new NavigationViewItem()
             {
-                Content = "Home",
-                Icon = new SymbolIcon { Symbol = SymbolRegular.Home24 },
-                TargetPageType = typeof(Views.Pages.DashboardPage)
-            },
-            new NavigationViewItem()
-            {
                 Content = "Data",
                 Icon = new SymbolIcon { Symbol = SymbolRegular.DataHistogram24 },
                 TargetPageType = typeof(Views.Pages.DataPage)
@@ -64,7 +58,7 @@ namespace OneDesk.ViewModels.Windows
         [RelayCommand]
         private void TogglePopup()
         {
-            PopupIsOpen = !PopupIsOpen;
+            PopupIsOpen = !UserInfoManager.IsLocked && !PopupIsOpen;
         }
 
         [RelayCommand]

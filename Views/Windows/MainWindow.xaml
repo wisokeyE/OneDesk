@@ -52,7 +52,7 @@
                     CornerRadius="30"
                     Command="{Binding ViewModel.AddUserCommand, Mode=OneWay}">
                     <ui:Button.Style>
-                        <Style TargetType="Button">
+                        <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
                             <Setter Property="Visibility" Value="Collapsed" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding ViewModel.UserInfoManager.UserInfos.Count}" Value="0">
@@ -69,7 +69,7 @@
                     Width="60" Height="60" CornerRadius="30"
                     Background="Transparent" BorderBrush="Transparent" Foreground="Transparent">
                     <ui:Button.Style>
-                        <Style TargetType="Button">
+                        <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
                             <Setter Property="Visibility" Value="Visible" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding ViewModel.UserInfoManager.UserInfos.Count}" Value="0">
@@ -78,7 +78,7 @@
                             </Style.Triggers>
                         </Style>
                     </ui:Button.Style>
-                    <ui:Image CornerRadius="30" Source="{Binding ViewModel.UserInfoManager.ActivatedUserInfo.PhotoBitmap}" />
+                    <ui:Image CornerRadius="30" Source="{Binding ViewModel.UserInfoManager.ActivatedUserInfo.PhotoBitmap, FallbackValue={x:Null}}" />
                 </ui:Button>
                 <ui:NavigationViewItem
                     Content="Settings"

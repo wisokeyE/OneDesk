@@ -24,6 +24,8 @@ public partial class UserInfoManager : ObservableObject, IUserInfoManager
 
     public GraphServiceClient? ActivatedClient => ActivatedUserInfo?.Client;
 
+    public bool IsLocked { get; set; }
+
     [GeneratedRegex(@"^user\d+$")]
     private static partial Regex UserFileNameRegex();
 
@@ -73,12 +75,14 @@ public partial class UserInfoManager : ObservableObject, IUserInfoManager
 
     public GraphServiceClient ActiveClient(int index)
     {
+        if (IsLocked) return ActivatedClient!;
         ReplaceUserInfo(UserInfos[index]);
         return ActivatedClient!;
     }
 
     public GraphServiceClient AddClient()
     {
+        if (IsLocked) return ActivatedClient!;
         // 计算下一个文件名
         var file = "";
         for (var i = 1; i <= _filePaths.Count + 1; i++)
@@ -103,7 +107,7 @@ public partial class UserInfoManager : ObservableObject, IUserInfoManager
 
     public void RemoveClient()
     {
-        if (ActivatedUserInfo is null) return;
+        if (IsLocked || ActivatedUserInfo is null) return;
         var oldActivateUserInfo = ActivatedUserInfo;
         // 先计算下一个要激活的 userinfo
         // 如果用户数大于1，则判断当前激活的是不是第一个，是则激活第二个，否则激活第一个

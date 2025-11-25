@@ -73,6 +73,11 @@ namespace OneDesk.Views.Windows
         {
             if (sender is not ListView userListView) return;
             var userInfoManager = ViewModel.UserInfoManager;
+            if (userInfoManager.IsLocked)
+            {
+                userListView.SelectedItem = userInfoManager.ActivatedUserInfo;
+                return;
+            }
             if (userListView.SelectedItem is null)
             {
                 if (userInfoManager.ActivatedUserInfo is not null)
