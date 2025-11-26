@@ -56,6 +56,10 @@ namespace OneDesk
                 services.AddSingleton<INavigationWindow, MainWindow>();
                 services.AddSingleton<MainWindowViewModel>();
 
+                // File Details Window
+                services.AddSingleton<FileDetailsWindow>();
+                services.AddSingleton<FileDetailsWindowViewModel>();
+
                 // User Info management
                 services.AddSingleton<IUserInfoManager, UserInfoManager>();
 

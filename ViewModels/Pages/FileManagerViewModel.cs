@@ -57,7 +57,7 @@ public partial class FileManagerViewModel : ObservableObject
                 Items = [];
                 return;
             }
-            if (!userInfo.IsInitialized)
+            if (!userInfo.IsUserInitialized)
             {
                 await userInfo.InitializationTask; // Wait until user info (DriveId) initialized
             }

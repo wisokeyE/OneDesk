@@ -31,7 +31,7 @@ public partial class UserInfo : ObservableObject, IDisposable
     private string? _driveId;
 
     [ObservableProperty]
-    private bool _isInitialized;
+    private bool _isUserInitialized;
 
     public GraphServiceClient Client { get; private set; }
 
@@ -91,42 +91,48 @@ public partial class UserInfo : ObservableObject, IDisposable
             DriveId = driveId;
             IsSvg = isSvg;
             PhotoUrl = photoUrl;
+            IsUserInitialized = true;
         });
 
         // 缓存图片到内存流中
-        using var httpClient = new HttpClient();
-        var response = await httpClient.GetByteArrayAsync(photoUrl);
-        using var memoryStream = new MemoryStream(response);
-        var image = new BitmapImage();
-        if (isSvg)
+        try
         {
-            var settings = new WpfDrawingSettings
+            using var httpClient = new HttpClient();
+            var response = await httpClient.GetByteArrayAsync(photoUrl);
+            using var memoryStream = new MemoryStream(response);
+            var image = new BitmapImage();
+            if (isSvg)
             {
-                IncludeRuntime = true,
-                TextAsGeometry = false
-            };
-            var converter = new SharpVectors.Converters.StreamSvgConverter(settings);
-            using var imageStream = new MemoryStream();
-            converter.Convert(memoryStream, imageStream);
-            image.BeginInit();
-            image.CacheOption = BitmapCacheOption.OnLoad;
-            image.StreamSource = imageStream;
-            image.EndInit();
+                var settings = new WpfDrawingSettings
+                {
+                    IncludeRuntime = true,
+                    TextAsGeometry = false
+                };
+                var converter = new SharpVectors.Converters.StreamSvgConverter(settings);
+                using var imageStream = new MemoryStream();
+                converter.Convert(memoryStream, imageStream);
+                image.BeginInit();
+                image.CacheOption = BitmapCacheOption.OnLoad;
+                image.StreamSource = imageStream;
+                image.EndInit();
+            }
+            else
+            {
+                image.BeginInit();
+                image.CacheOption = BitmapCacheOption.OnLoad;
+                image.StreamSource = memoryStream;
+                image.EndInit();
+            }
+            image.Freeze();
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                PhotoBitmap = image;
+            });
         }
-        else
+        catch (Exception)
         {
-            image.BeginInit();
-            image.CacheOption = BitmapCacheOption.OnLoad;
-            image.StreamSource = memoryStream;
-            image.EndInit();
+            // 头像加载失败不影响用户信息初始化
         }
-        image.Freeze();
-        await Application.Current.Dispatcher.InvokeAsync(() =>
-        {
-            // 在UI线程更新属性
-            PhotoBitmap = image;
-            IsInitialized = true;
-        });
     }
 
     public void Dispose()
