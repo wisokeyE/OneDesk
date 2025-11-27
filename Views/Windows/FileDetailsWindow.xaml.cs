@@ -16,12 +16,18 @@ public partial class FileDetailsWindow : FluentWindow
         ViewModel = viewModel;
         DataContext = ViewModel;
         InitializeComponent();
+
+        Closing += (s, e) =>
+        {
+            e.Cancel = true;
+            Hide();
+        };
     }
 
     public void ShowWithFileDetails(DriveItem item)
     {
         ViewModel.LoadFileDetails(item);
-        ShowDialog();
+        Show();
     }
 
     private void WebUrlButton_Click(object sender, RoutedEventArgs e)

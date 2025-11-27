@@ -75,7 +75,7 @@
                                   ItemsSource="{Binding ViewModel.BreadcrumbItems, Mode=OneWay}">
                     <ui:BreadcrumbBar.ItemTemplate>
                         <DataTemplate DataType="{x:Type models:Item}">
-                            <TextBlock Text="{Binding Name, Mode=OneTime}" />
+                            <ui:TextBlock Text="{Binding Name, Mode=OneTime}" />
                         </DataTemplate>
                     </ui:BreadcrumbBar.ItemTemplate>
                 </ui:BreadcrumbBar>
@@ -83,103 +83,106 @@
         </Border>
 
         <!-- 文件列表 -->
-        <Grid Grid.Row="1">
-            <ui:ListView x:Name="FileListView" ItemsSource="{Binding ViewModel.Items}"
-                         SelectionMode="Extended" MouseDoubleClick="FileListView_MouseDoubleClick"
-                         Margin="0">
-                <ui:ListView.View>
-                    <GridView>
-                        <GridViewColumn Header="名称" Width="400">
-                            <GridViewColumn.CellTemplate>
-                                <DataTemplate DataType="{x:Type graph:DriveItem}">
-                                    <StackPanel Orientation="Horizontal" Margin="4,6">
-                                        <ui:SymbolIcon Margin="0,0,12,0" FontSize="20">
-                                            <ui:SymbolIcon.Style>
-                                                <Style TargetType="ui:SymbolIcon">
-                                                    <Setter Property="Symbol" Value="Folder24" />
-                                                    <Setter Property="Foreground" Value="#FDB900" />
+        <Border Grid.Row="1" Background="{DynamicResource ControlFillColorDefaultBrush}"
+                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+            <StackPanel>
+                <ui:ListView x:Name="FileListView" ItemsSource="{Binding ViewModel.Items}"
+                             SelectionMode="Extended" MouseDoubleClick="FileListView_MouseDoubleClick"
+                             Margin="0" BorderThickness="0" MaxHeight="410">
+                    <ui:ListView.View>
+                        <ui:GridView>
+                            <ui:GridViewColumn Header="名称" Width="400">
+                                <ui:GridViewColumn.CellTemplate>
+                                    <DataTemplate DataType="{x:Type graph:DriveItem}">
+                                        <StackPanel Orientation="Horizontal" Margin="4,6">
+                                            <ui:SymbolIcon Margin="0,0,12,0" FontSize="20">
+                                                <ui:SymbolIcon.Style>
+                                                    <Style TargetType="ui:SymbolIcon">
+                                                        <Setter Property="Symbol" Value="Folder24" />
+                                                        <Setter Property="Foreground" Value="#FDB900" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Folder}" Value="{x:Null}">
+                                                                <Setter Property="Symbol" Value="Document24" />
+                                                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </ui:SymbolIcon.Style>
+                                            </ui:SymbolIcon>
+                                            <ui:TextBlock Text="{Binding Name}" VerticalAlignment="Center"
+                                                       FontSize="14" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ui:GridViewColumn.CellTemplate>
+                            </ui:GridViewColumn>
+                            <ui:GridViewColumn Header="修改日期" Width="180">
+                                <ui:GridViewColumn.CellTemplate>
+                                    <DataTemplate DataType="{x:Type graph:DriveItem}">
+                                        <ui:TextBlock Text="{Binding LastModifiedDateTime, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}', Mode=OneWay}"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   Margin="4,6" />
+                                    </DataTemplate>
+                                </ui:GridViewColumn.CellTemplate>
+                            </ui:GridViewColumn>
+                            <ui:GridViewColumn Header="类型" Width="200">
+                                <ui:GridViewColumn.CellTemplate>
+                                    <DataTemplate DataType="{x:Type graph:DriveItem}">
+                                        <ui:TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   Margin="4,6">
+                                            <ui:TextBlock.Style>
+                                                <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                                    <Setter Property="Text" Value="{Binding File.MimeType, Mode=OneWay}" />
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding Folder}" Value="{x:Null}">
-                                                            <Setter Property="Symbol" Value="Document24" />
-                                                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                            <Setter Property="Text" Value="{Binding File.MimeType, Mode=OneWay}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Folder}" Value="{x:Null}" >
+                                                            <Setter Property="Text" Value="文件" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Folder, Converter={x:Null}}" Value="False">
+                                                            <Setter Property="Text" Value="文件夹" />
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
-                                            </ui:SymbolIcon.Style>
-                                        </ui:SymbolIcon>
-                                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
-                                                   FontSize="14" />
-                                    </StackPanel>
-                                </DataTemplate>
-                            </GridViewColumn.CellTemplate>
-                        </GridViewColumn>
-                        <GridViewColumn Header="修改日期" Width="180">
-                            <GridViewColumn.CellTemplate>
-                                <DataTemplate DataType="{x:Type graph:DriveItem}">
-                                    <TextBlock Text="{Binding LastModifiedDateTime, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}', Mode=OneWay}"
-                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                               Margin="4,6" />
-                                </DataTemplate>
-                            </GridViewColumn.CellTemplate>
-                        </GridViewColumn>
-                        <GridViewColumn Header="类型" Width="200">
-                            <GridViewColumn.CellTemplate>
-                                <DataTemplate DataType="{x:Type graph:DriveItem}">
-                                    <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                               Margin="4,6">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-                                                <Setter Property="Text" Value="{Binding File.MimeType, Mode=OneWay}" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding Folder}" Value="{x:Null}">
-                                                        <Setter Property="Text" Value="{Binding File.MimeType, Mode=OneWay}" />
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding Folder}" Value="{x:Null}" >
-                                                        <Setter Property="Text" Value="文件" />
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding Folder, Converter={x:Null}}" Value="False">
-                                                        <Setter Property="Text" Value="文件夹" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                </DataTemplate>
-                            </GridViewColumn.CellTemplate>
-                        </GridViewColumn>
-                        <GridViewColumn Header="大小" Width="120">
-                            <GridViewColumn.CellTemplate>
-                                <DataTemplate DataType="{x:Type graph:DriveItem}">
-                                    <TextBlock Text="{Binding Size, Converter={StaticResource FileSizeConverter}, Mode=OneWay}"
-                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                               Margin="4,6" />
-                                </DataTemplate>
-                            </GridViewColumn.CellTemplate>
-                        </GridViewColumn>
-                    </GridView>
-                </ui:ListView.View>
-            </ui:ListView>
+                                            </ui:TextBlock.Style>
+                                        </ui:TextBlock>
+                                    </DataTemplate>
+                                </ui:GridViewColumn.CellTemplate>
+                            </ui:GridViewColumn>
+                            <ui:GridViewColumn Header="大小" Width="120">
+                                <ui:GridViewColumn.CellTemplate>
+                                    <DataTemplate DataType="{x:Type graph:DriveItem}">
+                                        <ui:TextBlock Text="{Binding Size, Converter={StaticResource FileSizeConverter}, Mode=OneWay}"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   Margin="4,6" />
+                                    </DataTemplate>
+                                </ui:GridViewColumn.CellTemplate>
+                            </ui:GridViewColumn>
+                        </ui:GridView>
+                    </ui:ListView.View>
+                </ui:ListView>
 
-            <!-- 加载指示器 -->
-            <Border Background="{DynamicResource ApplicationBackgroundBrush}"
-                    Opacity="0.9"
-                    Visibility="{Binding ViewModel.IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
-                <ui:ProgressRing IsIndeterminate="True" Width="48" Height="48" />
-            </Border>
-        </Grid>
+                <!-- 加载指示器 -->
+                <Border Background="{DynamicResource ApplicationBackgroundBrush}"
+                        Opacity="0.9"
+                        Visibility="{Binding ViewModel.IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <ui:ProgressRing IsIndeterminate="True" Width="48" Height="48" />
+                </Border>
+            </StackPanel>
+        </Border>
 
         <!-- 状态栏 -->
         <Border Grid.Row="2" Background="{DynamicResource ControlFillColorDefaultBrush}"
                 BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
                 BorderThickness="0,1,0,0" Padding="16,8">
-            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12">
+            <ui:TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12">
                 <Run Text="共 " />
                 <Run Text="{Binding Items.Count, ElementName=FileListView, Mode=OneWay}" FontWeight="SemiBold" />
                 <Run Text=" 项" />
                 <Run Text="  |  已选中 " />
                 <Run Text="{Binding SelectedItems.Count, ElementName=FileListView, Mode=OneWay}" FontWeight="SemiBold" />
                 <Run Text=" 项" />
-            </TextBlock>
+            </ui:TextBlock>
         </Border>
     </Grid>
 </Page>
