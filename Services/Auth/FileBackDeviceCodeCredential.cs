@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Text;
 using Azure.Core;
 using Azure.Identity;
+using OneDesk.Helpers;
 using Wpf.Ui.Controls;
 using Application = System.Windows.Application;
 using MessageBox = Wpf.Ui.Controls.MessageBox;
@@ -89,25 +90,9 @@ public class FileBackDeviceCodeCredential(DeviceCodeCredentialOptions options, s
         // 若被取消，尽快返回
         if (ct.IsCancellationRequested) return;
 
-        await Application.Current.Dispatcher.InvokeAsync(async () =>
-        {
-            var who = !string.IsNullOrWhiteSpace(userName)
-                ? $"将为用户：{userName} 登录。\n"
-                : "这是一个新的登录，请登录一个新用户。\n";
-            var textBox = new TextBox
-            {
-                Text = $"{who}请在浏览器打开: {info.VerificationUri}\n并输入代码: {info.UserCode}\n（有效期至: {info.ExpiresOn}）",
-                TextWrapping = TextWrapping.Wrap,
-                IsTextSelectionEnabled = true
-            };
-            var messageBox = new MessageBox
-            {
-                Title = "登录提示",
-                Content = textBox
-            };
+        var who = !string.IsNullOrWhiteSpace(userName) ? $"将为用户：{userName} 登录。\n" : "这是一个新的登录，请登录一个新用户。\n";
 
-            await messageBox.ShowDialogAsync(cancellationToken:ct);
-        }).Task;
+        await CommonUtils.ShowMessageBoxAsync("登录提示", $"{who}请在浏览器打开: {info.VerificationUri}\n并输入代码: {info.UserCode}\n（有效期至: {info.ExpiresOn}）", ct);
     }
 
 }
