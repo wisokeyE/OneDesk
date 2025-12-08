@@ -8,50 +8,60 @@ namespace OneDesk.ViewModels.Pages;
 
 public partial class FileManagerViewModel : ObservableObject
 {
-    private static readonly Item RootItem = new("/", "/", null);
-
     [ObservableProperty]
     private ObservableCollection<DriveItem> _items = [];
 
     [ObservableProperty]
-    private ObservableCollection<Item> _breadcrumbItems = [RootItem];
+    private ObservableCollection<Item> _breadcrumbItems = [new("/", "/", null)];
 
     [ObservableProperty]
     private bool _isLoading;
 
-    private readonly IUserInfoManager _userInfoManager;
+    [ObservableProperty]
+    private bool _rootSwitchPopupIsOpen;
+
+    [ObservableProperty]
+    private IUserInfoManager _userInfoManager;
+
+    [ObservableProperty]
+    private int _rootIndex;
 
     public Item CurrentFolder => BreadcrumbItems[^1];
 
     partial void OnBreadcrumbItemsChanged(ObservableCollection<Item> value)
     {
         OnPropertyChanged(nameof(CurrentFolder));
+
+        // 每次集合被替换时，重新绑定 CollectionChanged 监听
+        value.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(CurrentFolder));
+        };
     }
 
     public FileManagerViewModel(IUserInfoManager userInfoManager)
     {
         _userInfoManager = userInfoManager;
-        BreadcrumbItems.CollectionChanged += (_, _) =>
+
+        // 初始集合的监听会在 OnBreadcrumbItemsChanged 中设置
+        OnBreadcrumbItemsChanged(BreadcrumbItems);
+
+        _userInfoManager.PropertyChanged += (v, e) =>
         {
-            OnPropertyChanged(nameof(CurrentFolder));
-        };
-        _userInfoManager.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(IUserInfoManager.ActivatedUserInfo))
-            {
-                BreadcrumbItems = [RootItem];
-                _ = GetCurrentPathChildren();
-            }
+            if (e.PropertyName != nameof(IUserInfoManager.ActivatedUserInfo)) return;
+            BreadcrumbItems = [UserInfoManager.ActivatedUserInfo!.RootItem!];
+            RootIndex = 0;
+            _ = GetCurrentPathChildren();
         };
     }
 
     public async Task GetCurrentPathChildren()
     {
-        _userInfoManager.IsLocked = true;
+        UserInfoManager.IsLocked = true;
         IsLoading = true;
         try
         {
-            var userInfo = _userInfoManager.ActivatedUserInfo;
+            var userInfo = UserInfoManager.ActivatedUserInfo;
             if (userInfo is null)
             {
                 Items = [];
@@ -59,13 +69,18 @@ public partial class FileManagerViewModel : ObservableObject
             }
             if (!userInfo.IsUserInitialized)
             {
-                await userInfo.InitializationTask; // Wait until user info (DriveId) initialized
+                await userInfo.InitializationTask; // 等待用户信息初始化完成
+            }
+
+            if (BreadcrumbItems[0].DriveItem is null)
+            {
+                BreadcrumbItems = [userInfo.RootItem!];
             }
             var client = userInfo.Client;
 
             try
             {
-                var response = await GetItemChildrenByPath(client, userInfo.DriveId!, CurrentFolder.Path);
+                var response = await GetItemChildrenByPath(client, CurrentFolder);
                 Items = response?.Value is { Count: > 0 } ? new ObservableCollection<DriveItem>(response.Value) : [];
             }
             catch
@@ -76,7 +91,7 @@ public partial class FileManagerViewModel : ObservableObject
         finally
         {
             IsLoading = false;
-            _userInfoManager.IsLocked = false;
+            UserInfoManager.IsLocked = false;
         }
     }
 
@@ -100,7 +115,7 @@ public partial class FileManagerViewModel : ObservableObject
         if (item is not Item targetItem) return;
 
         var index = BreadcrumbItems.IndexOf(targetItem);
-        // Remove all items after the target item
+        // 移除目标项之后的所有项
         for (var i = BreadcrumbItems.Count - 1; i > index; i--)
         {
             BreadcrumbItems.RemoveAt(i);
@@ -108,14 +123,30 @@ public partial class FileManagerViewModel : ObservableObject
         _ = GetCurrentPathChildren();
     }
 
-    private static async Task<DriveItemCollectionResponse?> GetItemChildrenByPath(GraphServiceClient client, string driveId, string path)
+    [RelayCommand]
+    private void OnToggleRootSwitch()
     {
-        var rootRequestBuilder = client.Drives[driveId].Root;
-        if (!string.IsNullOrWhiteSpace(path) && path != "/")
+        if (UserInfoManager.ActivatedUserInfo != null)
         {
-            return await rootRequestBuilder.ItemWithPath(path).Children.GetAsync();
+            _ = UserInfoManager.ActivatedUserInfo.RefreshSharedWithMeItemsAsync();
         }
-        var root = await rootRequestBuilder.GetAsync();
-        return await client.Drives[driveId].Items[root!.Id].Children.GetAsync();
+        RootSwitchPopupIsOpen = !RootSwitchPopupIsOpen;
+    }
+
+    [RelayCommand]
+    private void OnSwitchRoot(Item item)
+    {
+        // 直接替换，以避免出现集合为空的中间态
+        BreadcrumbItems = [item];
+        RootSwitchPopupIsOpen = false;
+        _ = GetCurrentPathChildren();
+    }
+
+    private static async Task<DriveItemCollectionResponse?> GetItemChildrenByPath(GraphServiceClient client, Item item)
+    {
+        var driveItem = item.DriveItem!;
+        var parentReference = driveItem.ParentReference is null ? driveItem.RemoteItem!.ParentReference! : driveItem.ParentReference!;
+        var driveId = parentReference.DriveId!;
+        return await client.Drives[driveId].Items[driveItem.Id].Children.GetAsync();
     }
 }

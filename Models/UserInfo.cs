@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Collections.ObjectModel;
+using System.IO;
 using System.Net.Http;
 using System.Windows.Media.Imaging;
 using Azure.Core;
@@ -35,6 +36,12 @@ public partial class UserInfo : ObservableObject, IDisposable
     [ObservableProperty]
     private bool _isUserInitialized;
 
+    [ObservableProperty]
+    private Item? _rootItem;
+
+    [ObservableProperty]
+    private ObservableCollection<Item> _sharedWithMeItems = new();
+
     public GraphServiceClient Client { get; private set; }
 
     public TokenCredential Credential { get; private set; }
@@ -54,6 +61,7 @@ public partial class UserInfo : ObservableObject, IDisposable
         var displayName = DisplayName;
         var mail = Mail;
         var driveId = "";
+        Item? rootItem = null;
         var isSvg = IsSvg;
         var photoUrl = PhotoUrl;
         var svgContent = "";
@@ -70,6 +78,12 @@ public partial class UserInfo : ObservableObject, IDisposable
             if (drive is not null)
             {
                 driveId = drive.Id;
+            }
+
+            if (!string.IsNullOrEmpty(driveId))
+            {
+                var root = await Client.Drives[driveId].Root.GetAsync();
+                rootItem = new Item("/", "/", null, root);
             }
 
             try
@@ -94,9 +108,11 @@ public partial class UserInfo : ObservableObject, IDisposable
                 DisplayName = displayName;
                 Mail = mail;
                 DriveId = driveId;
+                RootItem = rootItem;
                 IsSvg = isSvg;
                 PhotoUrl = photoUrl;
                 IsUserInitialized = true;
+                _ = RefreshSharedWithMeItemsAsync();
             });
 
             // 缓存图片到内存流中
@@ -156,6 +172,36 @@ public partial class UserInfo : ObservableObject, IDisposable
         catch (Exception e)
         {
             await CommonUtils.ShowMessageBoxAsync("用户信息初始化失败", e.Message);
+        }
+    }
+
+    public async Task RefreshSharedWithMeItemsAsync()
+    {
+        try
+        {
+            var items = new List<Item>();
+
+            // 添加根目录项作为第一项
+            if (RootItem != null)
+            {
+                items.Add(RootItem);
+            }
+
+            // 获取分享给用户的项
+            var sharedItems = await Client.Drives[DriveId].SharedWithMe.GetAsSharedWithMeGetResponseAsync();
+            if (sharedItems?.Value != null)
+            {
+                items.AddRange(sharedItems.Value.Select(driveItem => new Item(driveItem.Name ?? "未命名", driveItem.Name ?? "", null, driveItem)));
+            }
+
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                SharedWithMeItems = new ObservableCollection<Item>(items);
+            });
+        }
+        catch (Exception e)
+        {
+            await CommonUtils.ShowMessageBoxAsync("刷新分享列表失败", e.Message);
         }
     }
 

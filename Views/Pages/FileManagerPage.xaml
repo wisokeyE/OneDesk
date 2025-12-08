@@ -42,7 +42,7 @@
 
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,12,0">
                     <ui:Button Command="{Binding ViewModel.UpCommand}" Margin="0,0,8,0"
-                               Appearance="Secondary" Padding="8">
+                               Appearance="Secondary" Padding="8" ToolTip="返回上一级">
                         <ui:Button.Style>
                             <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
                                 <Setter Property="IsEnabled" Value="True" />
@@ -56,7 +56,7 @@
                         <ui:SymbolIcon Symbol="ArrowUp24" FontSize="16" />
                     </ui:Button>
                     <ui:Button Command="{Binding ViewModel.RefreshCommand}"
-                               Appearance="Secondary" Padding="8">
+                               Appearance="Secondary" Padding="8" ToolTip="刷新">
                         <ui:Button.Style>
                             <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
                                 <Setter Property="IsEnabled" Value="True" />
@@ -69,10 +69,40 @@
                         </ui:Button.Style>
                         <ui:SymbolIcon Symbol="ArrowClockwise24" FontSize="16" />
                     </ui:Button>
+                    <ui:Button x:Name="RootSwitchButton"
+                               Command="{Binding ViewModel.ToggleRootSwitchCommand}"
+                               Appearance="Secondary" Padding="8" ToolTip="切换根目录" Margin="8,0,0,0">
+                        <ui:Button.Style>
+                            <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                <Setter Property="IsEnabled" Value="True" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ViewModel.IsLoading}" Value="True">
+                                        <Setter Property="IsEnabled" Value="False" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ui:Button.Style>
+                        <ui:SymbolIcon Symbol="FolderSwap24" FontSize="16" />
+                    </ui:Button>
                 </StackPanel>
 
-                <ui:BreadcrumbBar Grid.Column="1" Command="{Binding ViewModel.JumpCommand}"
-                                  ItemsSource="{Binding ViewModel.BreadcrumbItems, Mode=OneWay}">
+                <Popup Grid.Column="0" Placement="Bottom"
+                       PlacementTarget="{Binding ElementName=RootSwitchButton}"
+                       IsOpen="{Binding ViewModel.RootSwitchPopupIsOpen, Mode=TwoWay}"
+                       StaysOpen="False" AllowsTransparency="True">
+                    <Border Background="White" CornerRadius="4"
+                            BorderBrush="#E0E0E0" BorderThickness="1" Padding="8">
+                        <Border.Effect>
+                            <DropShadowEffect RenderingBias="Quality" BlurRadius="10"
+                                ShadowDepth="2" Color="#77000000" Opacity="0.6"/>
+                        </Border.Effect>
+                        <ui:ListView SelectedIndex="{Binding ViewModel.RootIndex, Mode=OneWay}"
+                                     ItemsSource="{Binding ViewModel.UserInfoManager.ActivatedUserInfo.SharedWithMeItems, Mode=OneWay, FallbackValue={x:Null}}"
+                                     SelectionMode="Single" DisplayMemberPath="Name" SelectionChanged="OnRootIndexChanged" />
+                    </Border>
+                </Popup>
+
+                <ui:BreadcrumbBar Grid.Column="1" Command="{Binding ViewModel.JumpCommand}" ItemsSource="{Binding ViewModel.BreadcrumbItems, Mode=OneWay}">
                     <ui:BreadcrumbBar.ItemTemplate>
                         <DataTemplate DataType="{x:Type models:Item}">
                             <ui:TextBlock Text="{Binding Name, Mode=OneTime}" />
@@ -109,8 +139,7 @@
                                                     </Style>
                                                 </ui:SymbolIcon.Style>
                                             </ui:SymbolIcon>
-                                            <ui:TextBlock Text="{Binding Name}" VerticalAlignment="Center"
-                                                       FontSize="14" />
+                                            <ui:TextBlock Text="{Binding Name}" VerticalAlignment="Center" FontSize="14" />
                                         </StackPanel>
                                     </DataTemplate>
                                 </ui:GridViewColumn.CellTemplate>
@@ -119,16 +148,14 @@
                                 <ui:GridViewColumn.CellTemplate>
                                     <DataTemplate DataType="{x:Type graph:DriveItem}">
                                         <ui:TextBlock Text="{Binding LastModifiedDateTime, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}', Mode=OneWay}"
-                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                   Margin="4,6" />
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="4,6" />
                                     </DataTemplate>
                                 </ui:GridViewColumn.CellTemplate>
                             </ui:GridViewColumn>
                             <ui:GridViewColumn Header="类型" Width="200">
                                 <ui:GridViewColumn.CellTemplate>
                                     <DataTemplate DataType="{x:Type graph:DriveItem}">
-                                        <ui:TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                   Margin="4,6">
+                                        <ui:TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="4,6">
                                             <ui:TextBlock.Style>
                                                 <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
                                                     <Setter Property="Text" Value="{Binding File.MimeType, Mode=OneWay}" />
@@ -153,8 +180,7 @@
                                 <ui:GridViewColumn.CellTemplate>
                                     <DataTemplate DataType="{x:Type graph:DriveItem}">
                                         <ui:TextBlock Text="{Binding Size, Converter={StaticResource FileSizeConverter}, Mode=OneWay}"
-                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                   Margin="4,6" />
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="4,6" />
                                     </DataTemplate>
                                 </ui:GridViewColumn.CellTemplate>
                             </ui:GridViewColumn>
@@ -163,8 +189,7 @@
                 </ui:ListView>
 
                 <!-- 加载指示器 -->
-                <Border Background="{DynamicResource ApplicationBackgroundBrush}"
-                        Opacity="0.9"
+                <Border Background="{DynamicResource ApplicationBackgroundBrush}" Opacity="0.9"
                         Visibility="{Binding ViewModel.IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <ui:ProgressRing IsIndeterminate="True" Width="48" Height="48" />
                 </Border>
@@ -173,8 +198,7 @@
 
         <!-- 状态栏 -->
         <Border Grid.Row="2" Background="{DynamicResource ControlFillColorDefaultBrush}"
-                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
-                BorderThickness="0,1,0,0" Padding="16,8">
+                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" Padding="16,8">
             <ui:TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12">
                 <Run Text="共 " />
                 <Run Text="{Binding Items.Count, ElementName=FileListView, Mode=OneWay}" FontWeight="SemiBold" />

@@ -1,9 +1,11 @@
 using System.IO;
+using System.Windows.Controls;
+using Microsoft.Graph.Models;
+using OneDesk.Models;
 using OneDesk.ViewModels.Pages;
 using OneDesk.Views.Windows;
 using Wpf.Ui.Abstractions.Controls;
-using Microsoft.Graph.Models;
-using OneDesk.Models;
+using ListView = Wpf.Ui.Controls.ListView;
 
 namespace OneDesk.Views.Pages;
 
@@ -32,7 +34,7 @@ public partial class FileManagerPage : INavigableView<FileManagerViewModel>
         {
             var currentFolder = ViewModel.CurrentFolder;
             var newPath = Path.Combine(currentFolder.Path, item.Name!).Replace("\\","/");
-            ViewModel.BreadcrumbItems.Add(new Item(item.Name!, newPath, currentFolder));
+            ViewModel.BreadcrumbItems.Add(new Item(item.Name!, newPath, currentFolder, item));
             _ = ViewModel.GetCurrentPathChildren();
         }
         // 如果是文件，显示详细信息窗口
@@ -40,6 +42,22 @@ public partial class FileManagerPage : INavigableView<FileManagerViewModel>
         {
             _fileDetailsWindow.Owner = Window.GetWindow(this);
             _fileDetailsWindow.ShowWithFileDetails(item);
+        }
+    }
+
+    public void OnRootIndexChanged(object sender, SelectionChangedEventArgs args)
+    {
+        if (sender is not ListView rootListView) return;
+        if (rootListView.SelectedItem is null)
+        {
+            var index = ViewModel.UserInfoManager.ActivatedUserInfo!.SharedWithMeItems.IndexOf(ViewModel.BreadcrumbItems[0]);
+            index = Math.Max(index, 0);
+            rootListView.SelectedIndex = index;
+            ViewModel.RootIndex = index;
+        }
+        else
+        {
+            ViewModel.SwitchRootCommand.Execute(rootListView.SelectedItem);
         }
     }
 }
