@@ -1,4 +1,3 @@
-using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Graph.Models;
 
 namespace OneDesk.ViewModels.Windows;
@@ -35,11 +34,15 @@ public partial class FileDetailsWindowViewModel : ObservableObject
     [ObservableProperty]
     private string _createdBy = string.Empty;
 
+    [ObservableProperty]
+    private bool _isFolder;
+
     public void LoadFileDetails(DriveItem item)
     {
         FileName = item.Name ?? "未知";
+        IsFolder = item.Folder != null;
         FileSize = FormatFileSize(item.Size ?? 0);
-        MimeType = item.File?.MimeType ?? "未知";
+        MimeType = IsFolder ? "文件夹" : (item.File?.MimeType ?? "未知");
         CreatedTime = item.CreatedDateTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "未知";
         ModifiedTime = item.LastModifiedDateTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "未知";
         QuickXorHash = item.File?.Hashes?.QuickXorHash ?? "无";
@@ -53,7 +56,7 @@ public partial class FileDetailsWindowViewModel : ObservableObject
     {
         string[] sizes = ["B", "KB", "MB", "GB", "TB"];
         double len = bytes;
-        int order = 0;
+        var order = 0;
         while (len >= 1024 && order < sizes.Length - 1)
         {
             order++;

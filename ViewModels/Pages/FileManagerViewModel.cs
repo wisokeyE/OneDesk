@@ -3,6 +3,7 @@ using Microsoft.Graph;
 using Microsoft.Graph.Models;
 using OneDesk.Models;
 using OneDesk.Services.Auth;
+using OneDesk.Services.FileCommand;
 
 namespace OneDesk.ViewModels.Pages;
 
@@ -10,6 +11,9 @@ public partial class FileManagerViewModel : ObservableObject
 {
     [ObservableProperty]
     private ObservableCollection<DriveItem> _items = [];
+
+    [ObservableProperty]
+    private ObservableCollection<DriveItem> _selectedItems = [];
 
     [ObservableProperty]
     private ObservableCollection<Item> _breadcrumbItems = [new("/", "/", null)];
@@ -26,6 +30,12 @@ public partial class FileManagerViewModel : ObservableObject
     [ObservableProperty]
     private int _rootIndex;
 
+    [ObservableProperty]
+    private IReadOnlyList<IFileCommand> _contextMenuCommands = [];
+    
+    [ObservableProperty]
+    private IFileCommandRegistry _commandRegistry;
+
     public Item CurrentFolder => BreadcrumbItems[^1];
 
     partial void OnBreadcrumbItemsChanged(ObservableCollection<Item> value)
@@ -39,9 +49,21 @@ public partial class FileManagerViewModel : ObservableObject
         };
     }
 
-    public FileManagerViewModel(IUserInfoManager userInfoManager)
+    partial void OnSelectedItemsChanged(ObservableCollection<DriveItem> value)
+    {
+        // 当选中项变化时，更新右键菜单命令
+        UpdateContextMenuCommands();
+
+        value.CollectionChanged += (_, _) =>
+        {
+            UpdateContextMenuCommands();
+        };
+    }
+
+    public FileManagerViewModel(IUserInfoManager userInfoManager, IFileCommandRegistry commandRegistry)
     {
         _userInfoManager = userInfoManager;
+        _commandRegistry = commandRegistry;
 
         // 初始集合的监听会在 OnBreadcrumbItemsChanged 中设置
         OnBreadcrumbItemsChanged(BreadcrumbItems);
@@ -53,6 +75,19 @@ public partial class FileManagerViewModel : ObservableObject
             RootIndex = 0;
             _ = GetCurrentPathChildren();
         };
+    }
+
+    private void UpdateContextMenuCommands()
+    {
+        var context = new FileCommandContext(SelectedItems, CurrentFolder.DriveItem);
+        ContextMenuCommands = CommandRegistry.GetExecutableCommands(context);
+    }
+
+    [RelayCommand]
+    private async Task ExecuteFileCommand(IFileCommand command)
+    {
+        var context = new FileCommandContext(SelectedItems, CurrentFolder.DriveItem);
+        await command.ExecuteAsync(context);
     }
 
     public async Task GetCurrentPathChildren()

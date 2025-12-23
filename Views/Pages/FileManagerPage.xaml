@@ -118,7 +118,27 @@
             <StackPanel>
                 <ui:ListView x:Name="FileListView" ItemsSource="{Binding ViewModel.Items}"
                              SelectionMode="Extended" MouseDoubleClick="FileListView_MouseDoubleClick"
+                             SelectionChanged="FileListView_SelectionChanged"
                              Margin="0" BorderThickness="0" MaxHeight="410">
+                    <ui:ListView.ItemContainerStyle>
+                        <Style TargetType="ui:ListViewItem" BasedOn="{StaticResource {x:Type ui:ListViewItem}}">
+                            <Setter Property="ContextMenu">
+                                <Setter.Value>
+                                    <ContextMenu DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}"
+                                                 ItemsSource="{Binding ContextMenuCommands}">
+                                        <ContextMenu.ItemContainerStyle>
+                                            <Style TargetType="MenuItem">
+                                                <Setter Property="Header" Value="{Binding Name}" />
+                                                <Setter Property="Command" Value="{Binding DataContext.ExecuteFileCommandCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                <Setter Property="CommandParameter" Value="{Binding}" />
+                                            </Style>
+                                        </ContextMenu.ItemContainerStyle>
+                                    </ContextMenu>
+                                </Setter.Value>
+                            </Setter>
+                            <Setter Property="Tag" Value="{Binding DataContext.ViewModel, RelativeSource={RelativeSource AncestorType=ui:ListView}}" />
+                        </Style>
+                    </ui:ListView.ItemContainerStyle>
                     <ui:ListView.View>
                         <ui:GridView>
                             <ui:GridViewColumn Header="名称" Width="400">

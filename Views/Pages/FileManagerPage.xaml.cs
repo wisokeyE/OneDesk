@@ -45,6 +45,14 @@ public partial class FileManagerPage : INavigableView<FileManagerViewModel>
         }
     }
 
+    private void FileListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        var tempList = FileListView.SelectedItems.Cast<DriveItem>().ToList();
+
+        // 同步选中项到 ViewModel
+        ViewModel.SelectedItems = [.. tempList];
+    }
+
     public void OnRootIndexChanged(object sender, SelectionChangedEventArgs args)
     {
         if (sender is not ListView rootListView) return;

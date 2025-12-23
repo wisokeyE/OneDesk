@@ -6,6 +6,7 @@ using Microsoft.Extensions.Hosting;
 using OneDesk.Services;
 using OneDesk.Services.Auth;
 using OneDesk.Services.Configuration;
+using OneDesk.Services.FileCommand;
 using OneDesk.ViewModels.Pages;
 using OneDesk.ViewModels.Windows;
 using OneDesk.Views.Pages;
@@ -62,6 +63,9 @@ namespace OneDesk
 
                 // User Info management
                 services.AddSingleton<IUserInfoManager, UserInfoManager>();
+
+                // File Command Registry
+                services.AddSingleton<IFileCommandRegistry, FileCommandRegistry>();
 
                 services.AddSingleton<FileManagerPage>();
                 services.AddSingleton<FileManagerViewModel>();

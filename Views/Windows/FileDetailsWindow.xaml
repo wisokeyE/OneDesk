@@ -23,9 +23,20 @@
                 <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
                         CornerRadius="8" Padding="20" Margin="0,0,0,20">
                     <StackPanel HorizontalAlignment="Center">
-                        <ui:SymbolIcon Symbol="Document24" FontSize="48"
-                                       Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
-                                       HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                        <ui:SymbolIcon FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,12">
+                            <ui:SymbolIcon.Style>
+                                <Style TargetType="ui:SymbolIcon">
+                                    <Setter Property="Symbol" Value="Document24" />
+                                    <Setter Property="Foreground" Value="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsFolder}" Value="True">
+                                            <Setter Property="Symbol" Value="Folder24" />
+                                            <Setter Property="Foreground" Value="#FDB900" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ui:SymbolIcon.Style>
+                        </ui:SymbolIcon>
                         <ui:TextBox Text="{Binding FileName}" FontSize="18" FontWeight="SemiBold"
                                    TextAlignment="Center" TextWrapping="Wrap" IsTextSelectionEnabled="True" Background="Transparent"/>
                     </StackPanel>
