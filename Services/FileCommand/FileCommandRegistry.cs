@@ -1,4 +1,5 @@
-using OneDesk.Services.FileCommand.Commands;
+using System.Reflection;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace OneDesk.Services.FileCommand;
 
@@ -25,12 +26,33 @@ public class FileCommandRegistry : IFileCommandRegistry
     }
 
     /// <summary>
-    /// 注册默认命令
+    /// 自动扫描并注册所有命令
     /// </summary>
     private void RegisterDefaultCommands()
     {
-        // 注册详情命令
-        Register(new DetailCommand(_serviceProvider));
+        // 获取当前程序集
+        var assembly = Assembly.GetExecutingAssembly();
+
+        // 定义目标命名空间常量，避免重复字符串比较
+        const string targetNamespace = "OneDesk.Services.FileCommand.Commands";
+        var commandInterfaceType = typeof(IFileCommand);
+
+        // 扫描并过滤类型，将最快的条件前置
+        var commandTypes = assembly.DefinedTypes
+            .Where(type => type is { IsAbstract: false, IsInterface: false, Namespace: targetNamespace } &&
+                           commandInterfaceType.IsAssignableFrom(type))
+            .Select(type => type.AsType());
+
+        // 实例化所有命令
+        var commands = commandTypes
+            .Select(type => (IFileCommand)ActivatorUtilities.CreateInstance(_serviceProvider, type))
+            .OrderBy(c => c.Order).ToList();
+
+        // 按 Order 排序后注册
+        foreach (var command in commands)
+        {
+            Register(command);
+        }
     }
 
     /// <summary>

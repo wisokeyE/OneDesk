@@ -10,6 +10,8 @@ public class DetailCommand(IServiceProvider serviceProvider) : IFileCommand
 {
     public string Name => "详情";
 
+    public int Order => 100;
+
     public bool CanExecute(FileCommandContext context)
     {
         // 只有选中单个项时才能执行

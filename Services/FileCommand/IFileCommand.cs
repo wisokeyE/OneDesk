@@ -11,6 +11,11 @@ public interface IFileCommand
     string Name { get; }
 
     /// <summary>
+    /// 命令在菜单中的显示顺序，数值越小越靠前
+    /// </summary>
+    int Order { get; }
+
+    /// <summary>
     /// 判断命令是否可以执行
     /// </summary>
     /// <param name="context">命令执行上下文</param>
