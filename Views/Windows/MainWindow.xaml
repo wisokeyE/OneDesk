@@ -81,7 +81,7 @@
                     <ui:Image CornerRadius="30" Source="{Binding ViewModel.UserInfoManager.ActivatedUserInfo.PhotoBitmap, FallbackValue={x:Null}}" />
                 </ui:Button>
                 <ui:NavigationViewItem
-                    Content="Settings"
+                    Content="设置"
                     Icon="{ui:SymbolIcon Settings24}"
                     TargetPageType="{x:Type pages:SettingsPage}" />
                 <Popup

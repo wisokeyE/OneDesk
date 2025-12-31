@@ -22,11 +22,11 @@
 
     <ui:DynamicScrollViewer>
         <StackPanel Margin="0,0,0,24">
-            <TextBlock FontSize="20" FontWeight="Medium" Text="Personalization" />
+            <TextBlock FontSize="20" FontWeight="Medium" Text="个性化" />
 
             <!-- Follow system theme toggle -->
             <StackPanel Orientation="Horizontal" Margin="0,12,0,0" VerticalAlignment="Center">
-                <TextBlock Text="Follow system theme" VerticalAlignment="Center" />
+                <TextBlock Text="跟随系统主题" VerticalAlignment="Center" />
                 <ui:ToggleSwitch Margin="12,0,0,0"
                                   IsChecked="{Binding ViewModel.Config.FollowSystemTheme, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
             </StackPanel>
@@ -42,39 +42,39 @@
                         </Style.Triggers>
                     </Style>
                 </StackPanel.Style>
-                <TextBlock Margin="0,12,0,0" Text="Theme" />
+                <TextBlock Margin="0,12,0,0" Text="主题" />
                 <!-- Theme options hidden when FollowSystemTheme = true -->
                 <RadioButton
                     Margin="0,12,0,0"
                     Command="{Binding ViewModel.ChangeThemeCommand, Mode=OneWay}"
                     CommandParameter="theme_light"
-                    Content="Light"
+                    Content="浅色"
                     GroupName="themeSelect"
                     IsChecked="{Binding ViewModel.CurrentTheme, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Light, Mode=OneWay}" />
                 <RadioButton
                     Margin="0,8,0,0"
                     Command="{Binding ViewModel.ChangeThemeCommand, Mode=OneWay}"
                     CommandParameter="theme_dark"
-                    Content="Dark"
+                    Content="深色"
                     GroupName="themeSelect"
                     IsChecked="{Binding ViewModel.CurrentTheme, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Dark, Mode=OneWay}" />
             </StackPanel>
-            
-            <TextBlock Margin="0,24,0,0" FontSize="20" FontWeight="Medium" Text="App Configuration" />
+
+            <TextBlock Margin="0,24,0,0" FontSize="20" FontWeight="Medium" Text="应用配置" />
 
             <!-- ClientId -->
             <TextBlock Margin="0,12,0,0" Text="Client ID" />
-            <ui:TextBox Margin="0,4,0,0" Text="{Binding ViewModel.Config.ClientId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Enter Client ID" HorizontalAlignment="Left" Width="339" />
+            <ui:TextBox Margin="0,4,0,0" Text="{Binding ViewModel.Config.ClientId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="输入 Client ID" HorizontalAlignment="Left" Width="339" />
 
             <!-- TenantId -->
             <TextBlock Margin="0,12,0,0" Text="Tenant ID" />
-            <ui:TextBox Margin="0,4,0,0" Text="{Binding ViewModel.Config.TenantId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Enter tenant ID" HorizontalAlignment="Left" Width="339" />
+            <ui:TextBox Margin="0,4,0,0" Text="{Binding ViewModel.Config.TenantId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="输入 Tenant ID" HorizontalAlignment="Left" Width="339" />
 
             <!-- CredentialFolderPath -->
-            <TextBlock Margin="0,12,0,0" Text="Credential Folder Path" />
-            <ui:TextBox Margin="0,4,0,0" Text="{Binding ViewModel.Config.CredentialFolderPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Folder path" HorizontalAlignment="Left" Width="339" />
+            <TextBlock Margin="0,12,0,0" Text="凭据文件夹路径" />
+            <ui:TextBox Margin="0,4,0,0" Text="{Binding ViewModel.Config.CredentialFolderPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="文件夹路径" HorizontalAlignment="Left" Width="339" />
 
-            <TextBlock Margin="0,24,0,0" FontSize="20" FontWeight="Medium" Text="About OneDesk" />
+            <TextBlock Margin="0,24,0,0" FontSize="20" FontWeight="Medium" Text="关于 OneDesk" />
             <TextBlock Margin="0,12,0,0" Text="{Binding ViewModel.AppVersion, Mode=OneWay}" />
         </StackPanel>
     </ui:DynamicScrollViewer>

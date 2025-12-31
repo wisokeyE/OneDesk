@@ -34,17 +34,6 @@ namespace OneDesk.ViewModels.Windows
         ];
 
         [ObservableProperty]
-        private ObservableCollection<object> _footerMenuItems =
-        [
-            new NavigationViewItem()
-            {
-                Content = "Settings",
-                Icon = new SymbolIcon { Symbol = SymbolRegular.Settings24 },
-                TargetPageType = typeof(Views.Pages.SettingsPage)
-            }
-        ];
-
-        [ObservableProperty]
         private ObservableCollection<MenuItem> _trayMenuItems =
         [
             new() { Header = "Home", Tag = "tray_home" }
