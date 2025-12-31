@@ -1,4 +1,5 @@
 using Microsoft.Graph.Models;
+using OneDesk.Models;
 
 namespace OneDesk.Services.FileCommand;
 
@@ -18,6 +19,11 @@ public class FileCommandContext
     public DriveItem? CurrentFolder { get; init; }
 
     /// <summary>
+    /// 用户信息
+    /// </summary>
+    public UserInfo UserInfo { get; init; }
+
+    /// <summary>
     /// 附加参数
     /// </summary>
     public Dictionary<string, object> Parameters { get; init; } = new();
@@ -27,10 +33,12 @@ public class FileCommandContext
     /// </summary>
     /// <param name="selectedItems">当前选中的文件项列表</param>
     /// <param name="currentFolder">当前文件夹</param>
-    public FileCommandContext(IReadOnlyList<DriveItem> selectedItems, DriveItem? currentFolder)
+    /// <param name="userInfo">用户信息</param>
+    public FileCommandContext(IReadOnlyList<DriveItem> selectedItems, DriveItem? currentFolder, UserInfo userInfo)
     {
         SelectedItems = selectedItems;
         CurrentFolder = currentFolder;
+        UserInfo = userInfo;
     }
 
     /// <summary>
@@ -38,8 +46,9 @@ public class FileCommandContext
     /// </summary>
     /// <param name="selectedItems">当前选中的文件项列表</param>
     /// <param name="currentFolder">当前文件夹</param>
+    /// <param name="userInfo">用户信息</param>
     /// <param name="parameters">附加参数</param>
-    public FileCommandContext(IReadOnlyList<DriveItem> selectedItems, DriveItem? currentFolder, Dictionary<string, object> parameters): this(selectedItems, currentFolder)
+    public FileCommandContext(IReadOnlyList<DriveItem> selectedItems, DriveItem? currentFolder, UserInfo userInfo, Dictionary<string, object> parameters): this(selectedItems, currentFolder, userInfo)
     {
         Parameters = parameters;
     }

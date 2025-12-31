@@ -17,8 +17,8 @@ namespace OneDesk.ViewModels.Windows
         private bool _popupIsOpen;
 
         [ObservableProperty]
-        private ObservableCollection<object> _menuItems = new()
-        {
+        private ObservableCollection<object> _menuItems =
+        [
             new NavigationViewItem()
             {
                 Content = "文件管理",
@@ -27,28 +27,28 @@ namespace OneDesk.ViewModels.Windows
             },
             new NavigationViewItem()
             {
-                Content = "Data",
-                Icon = new SymbolIcon { Symbol = SymbolRegular.DataHistogram24 },
-                TargetPageType = typeof(Views.Pages.DataPage)
+                Content = "任务管理",
+                Icon = new SymbolIcon { Symbol = SymbolRegular.TaskListSquareLtr24 },
+                TargetPageType = typeof(Views.Pages.TaskManagerPage)
             }
-        };
+        ];
 
         [ObservableProperty]
-        private ObservableCollection<object> _footerMenuItems = new()
-        {
+        private ObservableCollection<object> _footerMenuItems =
+        [
             new NavigationViewItem()
             {
                 Content = "Settings",
                 Icon = new SymbolIcon { Symbol = SymbolRegular.Settings24 },
                 TargetPageType = typeof(Views.Pages.SettingsPage)
             }
-        };
+        ];
 
         [ObservableProperty]
-        private ObservableCollection<MenuItem> _trayMenuItems = new()
-        {
-            new MenuItem { Header = "Home", Tag = "tray_home" }
-        };
+        private ObservableCollection<MenuItem> _trayMenuItems =
+        [
+            new() { Header = "Home", Tag = "tray_home" }
+        ];
 
         public MainWindowViewModel(IUserInfoManager userInfoManager)
         {

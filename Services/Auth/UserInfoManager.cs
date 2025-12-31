@@ -17,6 +17,8 @@ public partial class UserInfoManager : ObservableObject, IUserInfoManager
 
     private readonly ObservableCollection<UserInfo> _userInfos = [];
 
+    private int _nextUserId = 1;
+
     public ReadOnlyObservableCollection<UserInfo> UserInfos { get; }
 
     [ObservableProperty]
@@ -139,7 +141,7 @@ public partial class UserInfoManager : ObservableObject, IUserInfoManager
         _config.ActivatedUserFileName = Path.GetFileName(ActivatedUserInfo.UserInfoFilePath);
     }
 
-    private static UserInfo BuildUserInfo(string filePath)
+    private UserInfo BuildUserInfo(string filePath)
     {
         var credential = new FileBackDeviceCodeCredential(new DeviceCodeCredentialOptions
         {
@@ -148,7 +150,7 @@ public partial class UserInfoManager : ObservableObject, IUserInfoManager
         }, filePath);
         var graphServiceClient = new GraphServiceClient(credential, Scopes);
 
-        var userinfo = new UserInfo(graphServiceClient, credential, filePath);
+        var userinfo = new UserInfo(graphServiceClient, credential, filePath, _nextUserId++);
         return userinfo;
     }
 }

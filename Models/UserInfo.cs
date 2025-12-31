@@ -6,12 +6,16 @@ using Azure.Core;
 using Microsoft.Graph;
 using OneDesk.Helpers;
 using OneDesk.Helpers.Dicebear;
+using OneDesk.Models.Tasks;
 using SharpVectors.Renderers.Wpf;
 
 namespace OneDesk.Models;
 
 public partial class UserInfo : ObservableObject, IDisposable
 {
+    [ObservableProperty]
+    private int _userId;
+
     [ObservableProperty]
     private string _displayName = "未知用户";
 
@@ -42,17 +46,21 @@ public partial class UserInfo : ObservableObject, IDisposable
     [ObservableProperty]
     private ObservableCollection<Item> _sharedWithMeItems = new();
 
+    [ObservableProperty]
+    private UserTaskQueue? _taskQueue;
+
     public GraphServiceClient Client { get; private set; }
 
     public TokenCredential Credential { get; private set; }
 
     public Task InitializationTask { get; }
 
-    public UserInfo(GraphServiceClient client, TokenCredential credential, string filePath)
+    public UserInfo(GraphServiceClient client, TokenCredential credential, string filePath, int userId)
     {
         Client = client;
         Credential = credential;
         UserInfoFilePath = filePath;
+        UserId = userId;
         InitializationTask = InitUserInfoAsync();
     }
 

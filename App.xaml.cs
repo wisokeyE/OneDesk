@@ -7,12 +7,14 @@ using OneDesk.Services;
 using OneDesk.Services.Auth;
 using OneDesk.Services.Configuration;
 using OneDesk.Services.FileCommand;
+using OneDesk.Services.Tasks;
 using OneDesk.ViewModels.Pages;
 using OneDesk.ViewModels.Windows;
 using OneDesk.Views.Pages;
 using OneDesk.Views.Windows;
 using Wpf.Ui;
 using Wpf.Ui.DependencyInjection;
+using TaskScheduler = OneDesk.Services.Tasks.TaskScheduler;
 
 namespace OneDesk
 {
@@ -64,13 +66,16 @@ namespace OneDesk
                 // User Info management
                 services.AddSingleton<IUserInfoManager, UserInfoManager>();
 
+                // Task Scheduler
+                services.AddSingleton<ITaskScheduler, TaskScheduler>();
+
                 // File Command Registry
                 services.AddSingleton<IFileCommandRegistry, FileCommandRegistry>();
 
                 services.AddSingleton<FileManagerPage>();
                 services.AddSingleton<FileManagerViewModel>();
-                services.AddSingleton<DataPage>();
-                services.AddSingleton<DataViewModel>();
+                services.AddSingleton<TaskManagerPage>();
+                services.AddSingleton<TaskManagerViewModel>();
                 services.AddSingleton<SettingsPage>();
                 services.AddSingleton<SettingsViewModel>();
             }).Build();
@@ -78,10 +83,7 @@ namespace OneDesk
         /// <summary>
         /// Gets services.
         /// </summary>
-        public static IServiceProvider Services
-        {
-            get { return _host.Services; }
-        }
+        public static IServiceProvider Services => _host.Services;
 
         /// <summary>
         /// Occurs when the application is loading.

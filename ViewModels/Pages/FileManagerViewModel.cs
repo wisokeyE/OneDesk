@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using Microsoft.Graph;
 using Microsoft.Graph.Models;
+using OneDesk.Helpers;
 using OneDesk.Models;
 using OneDesk.Services.Auth;
 using OneDesk.Services.FileCommand;
@@ -79,14 +80,14 @@ public partial class FileManagerViewModel : ObservableObject
 
     private void UpdateContextMenuCommands()
     {
-        var context = new FileCommandContext(SelectedItems, CurrentFolder.DriveItem);
+        var context = new FileCommandContext(SelectedItems, CurrentFolder.DriveItem, UserInfoManager.ActivatedUserInfo!);
         ContextMenuCommands = CommandRegistry.GetExecutableCommands(context);
     }
 
     [RelayCommand]
     private async Task ExecuteFileCommand(IFileCommand command)
     {
-        var context = new FileCommandContext(SelectedItems, CurrentFolder.DriveItem);
+        var context = new FileCommandContext(SelectedItems, CurrentFolder.DriveItem, UserInfoManager.ActivatedUserInfo!);
         await command.ExecuteAsync(context);
     }
 
@@ -180,8 +181,7 @@ public partial class FileManagerViewModel : ObservableObject
     private static async Task<DriveItemCollectionResponse?> GetItemChildrenByPath(GraphServiceClient client, Item item)
     {
         var driveItem = item.DriveItem!;
-        var parentReference = driveItem.ParentReference is null ? driveItem.RemoteItem!.ParentReference! : driveItem.ParentReference!;
-        var driveId = parentReference.DriveId!;
+        var driveId = CommonUtils.GetDriveId(driveItem);
         return await client.Drives[driveId].Items[driveItem.Id].Children.GetAsync();
     }
 }
