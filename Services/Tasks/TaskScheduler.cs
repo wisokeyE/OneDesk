@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Specialized;
 using System.Threading.Channels;
+using Nito.AsyncEx;
 using OneDesk.Models;
 using OneDesk.Models.Tasks;
 using OneDesk.Services.Auth;
@@ -26,27 +27,17 @@ public class TaskScheduler : ITaskScheduler
     /// <summary>
     /// 最大并发协程数量
     /// </summary>
-    public int MaxConcurrentTasks { get; } = 5;
+    public int MaxConcurrentTasks => 5;
 
     /// <summary>
     /// 任务执行线程
     /// </summary>
-    private readonly Thread _executorThread;
+    private readonly AsyncContextThread _asyncContextThread;
 
     /// <summary>
     /// 取消令牌源
     /// </summary>
     private readonly CancellationTokenSource _cancellationTokenSource;
-
-    /// <summary>
-    /// 队列访问锁
-    /// </summary>
-    private readonly SemaphoreSlim _queueLock = new(1, 1);
-
-    /// <summary>
-    /// 并发任务信号量（限制同时执行的任务数量）
-    /// </summary>
-    private readonly SemaphoreSlim _concurrencyLimiter;
 
     /// <summary>
     /// UserInfoManager 引用
@@ -65,32 +56,35 @@ public class TaskScheduler : ITaskScheduler
         });
 
         _cancellationTokenSource = new CancellationTokenSource();
-        _concurrencyLimiter = new SemaphoreSlim(MaxConcurrentTasks, MaxConcurrentTasks);
 
-        // 初始化用户队列
-        foreach (var userInfo in _userInfoManager.UserInfos)
+        // 创建 AsyncContextThread
+        _asyncContextThread = new AsyncContextThread();
+
+        // 在任务执行线程上初始化用户队列
+        _asyncContextThread.Factory.Run(async () =>
         {
-            var userQueue = new UserTaskQueue(userInfo);
-            UserQueues.TryAdd(userInfo.UserId, userQueue);
-            Application.Current.Dispatcher.InvokeAsync(() =>
+            await Application.Current.Dispatcher.InvokeAsync(() =>
             {
-                userInfo.TaskQueue = userQueue;
+                foreach (var userInfo in _userInfoManager.UserInfos)
+                {
+                    var userQueue = new UserTaskQueue(userInfo);
+                    UserQueues.TryAdd(userInfo.UserId, userQueue);
+                    userInfo.TaskQueue = userQueue;
+                }
             });
-        }
 
-        // 监听用户变化
-        if (_userInfoManager.UserInfos is INotifyCollectionChanged collection)
-        {
-            collection.CollectionChanged += OnUserInfosChanged;
-        }
+            // 监听用户变化
+            if (_userInfoManager.UserInfos is INotifyCollectionChanged collection)
+            {
+                collection.CollectionChanged += OnUserInfosChanged;
+            }
 
-        // 创建独立线程运行任务执行器
-        _executorThread = new Thread(ExecutorThreadMain)
-        {
-            Name = "TaskExecutorThread",
-            IsBackground = true
-        };
-        _executorThread.Start();
+            // 启动消费者协程
+            for (var i = 0; i < MaxConcurrentTasks; i++)
+            {
+                _ = ConsumerLoopAsync(i);
+            }
+        });
     }
 
     /// <summary>
@@ -98,40 +92,44 @@ public class TaskScheduler : ITaskScheduler
     /// </summary>
     private void OnUserInfosChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        switch (e)
+        // 将处理逻辑调度到任务执行线程
+        _asyncContextThread.Factory.Run(async () =>
         {
-            case { Action: NotifyCollectionChangedAction.Add, NewItems: not null }:
+            switch (e)
             {
-                foreach (UserInfo userInfo in e.NewItems)
-                {
-                    var userQueue = new UserTaskQueue(userInfo);
-                    UserQueues.TryAdd(userInfo.UserId, userQueue);
-                    Application.Current.Dispatcher.Invoke(() =>
+                case { Action: NotifyCollectionChangedAction.Add, NewItems: not null }:
                     {
-                        userInfo.TaskQueue = userQueue;
-                    });
-                }
-
-                break;
-            }
-            case { Action: NotifyCollectionChangedAction.Remove, OldItems: not null }:
-            {
-                foreach (UserInfo userInfo in e.OldItems)
-                {
-                    if (UserQueues.TryRemove(userInfo.UserId, out var userQueue))
-                    {
-                        // 取消所有待处理任务
+                        // 使用同步调度，确保更新用户队列时，不会有任务执行队列的并发修改问题
                         Application.Current.Dispatcher.Invoke(() =>
                         {
-                            CancelAllPendingTasks(userQueue);
-                            userInfo.TaskQueue = null; // 清理引用，将之前的循环引用断开
+                            foreach (UserInfo userInfo in e.NewItems)
+                            {
+                                var userQueue = new UserTaskQueue(userInfo);
+                                UserQueues.TryAdd(userInfo.UserId, userQueue);
+                                userInfo.TaskQueue = userQueue;
+                            }
                         });
-                    }
-                }
 
-                break;
+                        break;
+                    }
+                case { Action: NotifyCollectionChangedAction.Remove, OldItems: not null }:
+                    {
+                        // 使用同步调度，确保更新用户队列时，不会有任务执行队列的并发修改问题
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            foreach (UserInfo userInfo in e.OldItems)
+                            {
+                                if (!UserQueues.TryRemove(userInfo.UserId, out var userQueue)) continue;
+                                // 取消所有待处理任务
+                                CancelAllPendingTasks(userQueue);
+                                userInfo.TaskQueue = null; // 清理引用，将之前的循环引用断开
+                            }
+                        });
+
+                        break;
+                    }
             }
-        }
+        });
     }
 
     /// <summary>
@@ -153,55 +151,63 @@ public class TaskScheduler : ITaskScheduler
     /// <param name="taskInfo">任务信息</param>
     public async Task AddTaskAsync(TaskInfo taskInfo)
     {
-        var userId = taskInfo.UserInfo.UserId;
-        // 获取用户队列
-        if (!UserQueues.TryGetValue(userId, out var userQueue))
+        // 将添加任务的逻辑调度到任务执行线程
+        await _asyncContextThread.Factory.Run(async () =>
         {
-            throw new InvalidOperationException($"用户 ID {userId} 的任务队列不存在");
-        }
+            var userId = taskInfo.UserInfo.UserId;
+            // 获取用户队列
+            if (!UserQueues.TryGetValue(userId, out var userQueue))
+            {
+                throw new InvalidOperationException($"用户 ID {userId} 的任务队列不存在");
+            }
 
-        // 添加到用户的待处理队列
-        await Application.Current.Dispatcher.InvokeAsync(() =>
-        {
-            userQueue.AddPendingTask(taskInfo);
+            // 添加到用户的待处理队列，使用同步调度，确保更新用户队列时，不会有任务执行队列的并发修改问题
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                userQueue.AddPendingTask(taskInfo);
+            });
+
+            // 添加到全局队列
+            await _globalQueue.Writer.WriteAsync(taskInfo, _cancellationTokenSource.Token);
         });
-
-        // 添加到全局队列
-        await _globalQueue.Writer.WriteAsync(taskInfo, _cancellationTokenSource.Token);
     }
 
     /// <summary>
-    /// 取出下一个待执行的任务（带锁保护）
+    /// 消费者循环，从队列中取任务并执行
     /// </summary>
-    /// <returns>任务信息，如果取消则返回 null</returns>
-    private async Task<TaskInfo?> DequeueTaskAsync()
+    /// <param name="consumerId">消费者ID</param>
+    private async Task ConsumerLoopAsync(int consumerId)
     {
-        await _queueLock.WaitAsync(_cancellationTokenSource.Token);
-        try
+        while (!_cancellationTokenSource.Token.IsCancellationRequested)
         {
-            var taskInfo = await _globalQueue.Reader.ReadAsync(_cancellationTokenSource.Token);
-
-            var userId = taskInfo.UserInfo.UserId;
-
-            // 从用户队列中移除
-            if (UserQueues.TryGetValue(userId, out var userQueue))
+            try
             {
-                await Application.Current.Dispatcher.InvokeAsync(() =>
+                // 从全局队列中读取任务
+                var taskInfo = await _globalQueue.Reader.ReadAsync(_cancellationTokenSource.Token);
+                var userId = taskInfo.UserInfo.UserId;
+
+                // 如果用户队列不存在，任务无效，直接跳过
+                if (!UserQueues.TryGetValue(userId, out var userQueue)) continue;
+
+                // 从用户队列中移除，使用同步调度，确保更新用户队列时，不会有任务执行队列的并发修改问题
+                Application.Current.Dispatcher.Invoke(() =>
                 {
                     userQueue.DequeuePendingTask();
                 });
-            }
-            else
-            {
-                // 用户队列不存在，任务无效
-                return null;
-            }
 
-            return taskInfo;
-        }
-        finally
-        {
-            _queueLock.Release();
+                // 执行任务
+                await ExecuteTaskAsync(taskInfo);
+            }
+            catch (OperationCanceledException)
+            {
+                // 取消令牌被触发，退出循环
+                break;
+            }
+            catch (Exception ex)
+            {
+                // 记录错误但继续运行
+                System.Diagnostics.Debug.WriteLine($"消费者 {consumerId} 发生异常: {ex.Message}");
+            }
         }
     }
 
@@ -286,67 +292,6 @@ public class TaskScheduler : ITaskScheduler
     }
 
     /// <summary>
-    /// 执行器线程主函数
-    /// </summary>
-    private void ExecutorThreadMain()
-    {
-        var tasks = new List<Task>();
-
-        while (!_cancellationTokenSource.Token.IsCancellationRequested)
-        {
-            try
-            {
-                // 等待有可用的并发槽位
-                _concurrencyLimiter.Wait(_cancellationTokenSource.Token);
-
-                // 取出任务
-                var dequeueTask = DequeueTaskAsync();
-                dequeueTask.Wait(_cancellationTokenSource.Token);
-                var taskInfo = dequeueTask.Result;
-
-                if (taskInfo != null)
-                {
-                    // 启动新的协程执行任务
-                    var executeTask = Task.Run(async () =>
-                    {
-                        try
-                        {
-                            await ExecuteTaskAsync(taskInfo);
-                        }
-                        finally
-                        {
-                            // 释放并发槽位
-                            _concurrencyLimiter.Release();
-                        }
-                    }, _cancellationTokenSource.Token);
-
-                    tasks.Add(executeTask);
-
-                    // 清理已完成的任务
-                    tasks.RemoveAll(t => t.IsCompleted);
-                }
-                else
-                {
-                    // 没有任务，释放槽位
-                    _concurrencyLimiter.Release();
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                break;
-            }
-            catch (Exception)
-            {
-                // 记录错误但继续运行
-                _concurrencyLimiter.Release();
-            }
-        }
-
-        // 等待所有任务完成
-        Task.WaitAll(tasks.ToArray(), TimeSpan.FromSeconds(10));
-    }
-
-    /// <summary>
     /// 释放资源
     /// </summary>
     public void Dispose()
@@ -359,10 +304,11 @@ public class TaskScheduler : ITaskScheduler
 
         _cancellationTokenSource.Cancel();
         _globalQueue.Writer.Complete();
-        _executorThread.Join(TimeSpan.FromSeconds(5));
+
+        // 释放 AsyncContextThread
+        _asyncContextThread.Join();
+
         _cancellationTokenSource.Dispose();
-        _queueLock.Dispose();
-        _concurrencyLimiter.Dispose();
         GC.SuppressFinalize(this);
     }
 }
