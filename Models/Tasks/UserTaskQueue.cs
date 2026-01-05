@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.ObjectModel;
 
 namespace OneDesk.Models.Tasks;
@@ -5,7 +6,7 @@ namespace OneDesk.Models.Tasks;
 /// <summary>
 /// 用户任务队列
 /// </summary>
-public class UserTaskQueue : ObservableObject
+public partial class UserTaskQueue : ObservableObject
 {
     /// <summary>
     /// 用户信息
@@ -65,6 +66,24 @@ public class UserTaskQueue : ObservableObject
     /// 失败任务列表（只读）
     /// </summary>
     public ReadOnlyObservableCollection<TaskInfo> FailedTasks { get; }
+
+    /// <summary>
+    /// 当前查看的任务列表
+    /// </summary>
+    [ObservableProperty]
+    private ReadOnlyObservableCollection<TaskInfo>? _currentViewingTasks;
+
+    /// <summary>
+    /// 当前查看的任务列表标题
+    /// </summary>
+    [ObservableProperty]
+    private string? _currentViewingTitle;
+
+    /// <summary>
+    /// 任务详情面板是否可见
+    /// </summary>
+    [ObservableProperty]
+    private bool _isTaskDetailsPanelVisible;
 
     public UserTaskQueue(UserInfo userInfo)
     {
@@ -137,5 +156,52 @@ public class UserTaskQueue : ObservableObject
         _completedTasks.Clear();
         _cancelledTasks.Clear();
         _failedTasks.Clear();
+    }
+
+    /// <summary>
+    /// 切换查看指定状态的任务列表
+    /// </summary>
+    /// <param name="statusTag">状态标签（Pending, Running, Completed, Cancelled, Failed）</param>
+    public void ToggleViewTasksByStatus(string statusTag)
+    {
+        // 获取对应状态的任务列表
+        var taskList = statusTag switch
+        {
+            "Pending" => PendingTasks,
+            "Running" => null, // 运行中的任务没有单独的列表
+            "Completed" => CompletedTasks,
+            "Cancelled" => CancelledTasks,
+            "Failed" => FailedTasks,
+            _ => null
+        };
+
+        // 设置标题
+        var title = statusTag switch
+        {
+            "Pending" => "待处理任务",
+            "Running" => "运行中的任务",
+            "Completed" => "已完成任务",
+            "Cancelled" => "已取消任务",
+            "Failed" => "失败任务",
+            _ => "任务列表"
+        };
+
+        // 如果点击的是当前正在查看的状态，则收起面板
+        if (IsTaskDetailsPanelVisible && CurrentViewingTasks == taskList)
+        {
+            IsTaskDetailsPanelVisible = false;
+            CurrentViewingTasks = null;
+            CurrentViewingTitle = null;
+            return;
+        }
+
+        // 更新当前查看的任务列表
+        CurrentViewingTasks = taskList;
+
+        // 显示任务总数
+        CurrentViewingTitle = title;
+
+        // 显示详情面板
+        IsTaskDetailsPanelVisible = true;
     }
 }

@@ -4,6 +4,8 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:models="clr-namespace:OneDesk.Models"
+    xmlns:tasks="clr-namespace:OneDesk.Models.Tasks"
+    xmlns:converters="clr-namespace:OneDesk.Helpers.Converters"
     xmlns:local="clr-namespace:OneDesk.Views.Pages"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
@@ -16,6 +18,14 @@
     ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
     Foreground="{DynamicResource TextFillColorPrimaryBrush}"
     mc:Ignorable="d">
+
+    <Page.Resources>
+        <!-- Null 到 Visibility 转换器 -->
+        <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
+        <!-- 反向 Null 到 Visibility 转换器（null 时显示，非 null 时隐藏） -->
+        <converters:InverseNullToVisibilityConverter x:Key="InverseNullToVisibilityConverter" />
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+    </Page.Resources>
 
     <Grid Margin="20">
         <Grid.RowDefinitions>
@@ -30,144 +40,341 @@
                     <DataTemplate DataType="{x:Type models:UserInfo}">
                         <ui:Card Margin="0,0,0,16" Padding="20">
                             <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
 
-                                <!-- 左侧：头像和用户名 -->
-                                <StackPanel Grid.Column="0" Orientation="Horizontal">
-                                    <ui:Image
-                                        Width="60"
-                                        Height="60"
-                                        CornerRadius="30"
-                                        Source="{Binding PhotoBitmap}"
-                                        Margin="0,0,16,0" />
-                                    <StackPanel VerticalAlignment="Center">
-                                        <ui:TextBlock
-                                            Text="{Binding DisplayName}"
-                                            FontSize="18"
-                                            FontWeight="SemiBold"
-                                            Margin="0,0,0,4" />
-                                        <ui:TextBlock
-                                            Text="{Binding Mail}"
-                                            FontSize="13"
-                                            Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}" />
+                                <!-- 第一行：用户信息和任务统计 -->
+                                <Grid Grid.Row="0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- 左侧：头像和用户名 -->
+                                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                        <ui:Image
+                                            Width="60"
+                                            Height="60"
+                                            CornerRadius="30"
+                                            Source="{Binding PhotoBitmap}"
+                                            Margin="0,0,16,0" />
+                                        <StackPanel VerticalAlignment="Center">
+                                            <ui:TextBlock
+                                                Text="{Binding DisplayName}"
+                                                FontSize="18"
+                                                FontWeight="SemiBold"
+                                                Margin="0,0,0,4" />
+                                            <ui:TextBlock
+                                                Text="{Binding Mail}"
+                                                FontSize="13"
+                                                Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
                                     </StackPanel>
-                                </StackPanel>
 
-                                <!-- 右侧：任务统计 -->
-                                <StackPanel
-                                    Grid.Column="2"
-                                    Orientation="Horizontal"
-                                    VerticalAlignment="Center"
-                                    HorizontalAlignment="Right">
+                                    <!-- 右侧：任务统计 -->
+                                    <StackPanel
+                                        Grid.Column="2"
+                                        Orientation="Horizontal"
+                                        VerticalAlignment="Center"
+                                        HorizontalAlignment="Right">
 
-                                    <!-- 待处理任务 -->
-                                    <Border
-                                        Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
-                                        CornerRadius="8"
-                                        Padding="16,8"
-                                        Margin="0,0,12,0">
-                                        <StackPanel>
-                                            <ui:TextBlock
-                                                Text="待处理"
-                                                FontSize="12"
-                                                Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                                                HorizontalAlignment="Center"
-                                                Margin="0,0,0,4" />
-                                            <ui:TextBlock
-                                                Text="{Binding TaskQueue.PendingTasks.Count, FallbackValue=0}"
-                                                FontSize="20"
-                                                FontWeight="Bold"
-                                                HorizontalAlignment="Center" />
-                                        </StackPanel>
-                                    </Border>
+                                        <!-- 待处理任务 -->
+                                        <Border
+                                            Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
+                                            CornerRadius="8"
+                                            Padding="16,8"
+                                            Margin="0,0,12,0"
+                                            Cursor="Hand"
+                                            MouseLeftButtonDown="OnTaskStatusClick"
+                                            Tag="Pending">
+                                            <StackPanel>
+                                                <ui:TextBlock
+                                                    Text="待处理"
+                                                    FontSize="12"
+                                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                                    HorizontalAlignment="Center"
+                                                    Margin="0,0,0,4" />
+                                                <ui:TextBlock
+                                                    Text="{Binding TaskQueue.PendingTasks.Count, FallbackValue=0}"
+                                                    FontSize="20"
+                                                    FontWeight="Bold"
+                                                    HorizontalAlignment="Center" />
+                                            </StackPanel>
+                                        </Border>
 
-                                    <!-- 正在运行 -->
-                                    <Border
-                                        Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
-                                        CornerRadius="8"
-                                        Padding="16,8"
-                                        Margin="0,0,12,0">
-                                        <StackPanel>
-                                            <ui:TextBlock
-                                                Text="正在运行"
-                                                FontSize="12"
-                                                Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                                                HorizontalAlignment="Center"
-                                                Margin="0,0,0,4" />
-                                            <ui:TextBlock
-                                                Text="{Binding TaskQueue.RunningTaskCount, FallbackValue=0}"
-                                                FontSize="20"
-                                                FontWeight="Bold"
-                                                HorizontalAlignment="Center" />
-                                        </StackPanel>
-                                    </Border>
+                                        <!-- 运行中 -->
+                                        <Border
+                                            Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
+                                            CornerRadius="8"
+                                            Padding="16,8"
+                                            Margin="0,0,12,0"
+                                            Cursor="Hand"
+                                            MouseLeftButtonDown="OnTaskStatusClick"
+                                            Tag="Running">
+                                            <StackPanel>
+                                                <ui:TextBlock
+                                                    Text="运行中"
+                                                    FontSize="12"
+                                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                                    HorizontalAlignment="Center"
+                                                    Margin="0,0,0,4" />
+                                                <ui:TextBlock
+                                                    Text="{Binding TaskQueue.RunningTaskCount, FallbackValue=0}"
+                                                    FontSize="20"
+                                                    FontWeight="Bold"
+                                                    HorizontalAlignment="Center" />
+                                            </StackPanel>
+                                        </Border>
 
-                                    <!-- 已完成 -->
-                                    <Border
-                                        Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
-                                        CornerRadius="8"
-                                        Padding="16,8"
-                                        Margin="0,0,12,0">
-                                        <StackPanel>
-                                            <ui:TextBlock
-                                                Text="已完成"
-                                                FontSize="12"
-                                                Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                                                HorizontalAlignment="Center"
-                                                Margin="0,0,0,4" />
-                                            <ui:TextBlock
-                                                Text="{Binding TaskQueue.CompletedTasks.Count, FallbackValue=0}"
-                                                FontSize="20"
-                                                FontWeight="Bold"
-                                                HorizontalAlignment="Center" />
-                                        </StackPanel>
-                                    </Border>
+                                        <!-- 已完成 -->
+                                        <Border
+                                            Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
+                                            CornerRadius="8"
+                                            Padding="16,8"
+                                            Margin="0,0,12,0"
+                                            Cursor="Hand"
+                                            MouseLeftButtonDown="OnTaskStatusClick"
+                                            Tag="Completed">
+                                            <StackPanel>
+                                                <ui:TextBlock
+                                                    Text="已完成"
+                                                    FontSize="12"
+                                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                                    HorizontalAlignment="Center"
+                                                    Margin="0,0,0,4" />
+                                                <ui:TextBlock
+                                                    Text="{Binding TaskQueue.CompletedTasks.Count, FallbackValue=0}"
+                                                    FontSize="20"
+                                                    FontWeight="Bold"
+                                                    HorizontalAlignment="Center" />
+                                            </StackPanel>
+                                        </Border>
 
-                                    <!-- 已取消 -->
-                                    <Border
-                                        Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
-                                        CornerRadius="8"
-                                        Padding="16,8"
-                                        Margin="0,0,12,0">
-                                        <StackPanel>
-                                            <ui:TextBlock
-                                                Text="已取消"
-                                                FontSize="12"
-                                                Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                                                HorizontalAlignment="Center"
-                                                Margin="0,0,0,4" />
-                                            <ui:TextBlock
-                                                Text="{Binding TaskQueue.CancelledTasks.Count, FallbackValue=0}"
-                                                FontSize="20"
-                                                FontWeight="Bold"
-                                                HorizontalAlignment="Center" />
-                                        </StackPanel>
-                                    </Border>
+                                        <!-- 已取消 -->
+                                        <Border
+                                            Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
+                                            CornerRadius="8"
+                                            Padding="16,8"
+                                            Margin="0,0,12,0"
+                                            Cursor="Hand"
+                                            MouseLeftButtonDown="OnTaskStatusClick"
+                                            Tag="Cancelled">
+                                            <StackPanel>
+                                                <ui:TextBlock
+                                                    Text="已取消"
+                                                    FontSize="12"
+                                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                                    HorizontalAlignment="Center"
+                                                    Margin="0,0,0,4" />
+                                                <ui:TextBlock
+                                                    Text="{Binding TaskQueue.CancelledTasks.Count, FallbackValue=0}"
+                                                    FontSize="20"
+                                                    FontWeight="Bold"
+                                                    HorizontalAlignment="Center" />
+                                            </StackPanel>
+                                        </Border>
 
-                                    <!-- 失败 -->
-                                    <Border
-                                        Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
-                                        CornerRadius="8"
-                                        Padding="16,8">
-                                        <StackPanel>
-                                            <ui:TextBlock
-                                                Text="失败"
-                                                FontSize="12"
-                                                Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                                                HorizontalAlignment="Center"
-                                                Margin="0,0,0,4" />
-                                            <ui:TextBlock
-                                                Text="{Binding TaskQueue.FailedTasks.Count, FallbackValue=0}"
-                                                FontSize="20"
-                                                FontWeight="Bold"
-                                                HorizontalAlignment="Center" />
-                                        </StackPanel>
-                                    </Border>
-                                </StackPanel>
+                                        <!-- 失败 -->
+                                        <Border
+                                            Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
+                                            CornerRadius="8"
+                                            Padding="16,8"
+                                            Cursor="Hand"
+                                            MouseLeftButtonDown="OnTaskStatusClick"
+                                            Tag="Failed">
+                                            <StackPanel>
+                                                <ui:TextBlock
+                                                    Text="失败"
+                                                    FontSize="12"
+                                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                                    HorizontalAlignment="Center"
+                                                    Margin="0,0,0,4" />
+                                                <ui:TextBlock
+                                                    Text="{Binding TaskQueue.FailedTasks.Count, FallbackValue=0}"
+                                                    FontSize="20"
+                                                    FontWeight="Bold"
+                                                    HorizontalAlignment="Center" />
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- 第二行：任务详情展开区域 -->
+                                <Border
+                                    Grid.Row="1"
+                                    Margin="0,16,0,0"
+                                    Padding="16"
+                                    Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
+                                    CornerRadius="8"
+                                    Visibility="{Binding TaskQueue.IsTaskDetailsPanelVisible, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=false}">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+
+                                        <!-- 标题栏 -->
+                                        <ui:TextBlock
+                                            Grid.Row="0"
+                                            Text="{Binding TaskQueue.CurrentViewingTitle, FallbackValue={x:Null}}"
+                                            FontSize="14"
+                                            FontWeight="SemiBold"
+                                            Margin="0,0,0,12" />
+
+                                        <!-- 任务列表 -->
+                                        <ui:ListView
+                                            Grid.Row="1"
+                                            ItemsSource="{Binding TaskQueue.CurrentViewingTasks, FallbackValue={x:Null}}"
+                                            MaxHeight="445"
+                                            BorderThickness="0"
+                                            Background="Transparent"
+                                            ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                            ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                            VirtualizingPanel.IsVirtualizing="True"
+                                            VirtualizingPanel.VirtualizationMode="Recycling"
+                                            Visibility="{Binding TaskQueue.CurrentViewingTasks, Converter={StaticResource NullToVisibilityConverter}, FallbackValue={x:Null}}">
+                                            <ui:ListView.ItemContainerStyle>
+                                                <Style TargetType="ui:ListViewItem" BasedOn="{StaticResource {x:Type ui:ListViewItem}}">
+                                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                                    <Setter Property="Padding" Value="0" />
+                                                    <Setter Property="Margin" Value="0,0,0,6" />
+                                                    <Setter Property="Background" Value="Transparent" />
+                                                    <Setter Property="BorderThickness" Value="0" />
+                                                </Style>
+                                            </ui:ListView.ItemContainerStyle>
+                                            <ui:ListView.ItemTemplate>
+                                                <DataTemplate DataType="{x:Type tasks:TaskInfo}">
+                                                    <ui:Card
+                                                        Padding="8"
+                                                        Margin="0">
+                                                        <Grid>
+                                                            <Grid.RowDefinitions>
+                                                                <RowDefinition Height="Auto" />
+                                                                <RowDefinition Height="Auto" />
+                                                                <RowDefinition Height="Auto" />
+                                                            </Grid.RowDefinitions>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <!-- 文件名（左上角） -->
+                                                            <ui:TextBlock
+                                                                Grid.Row="0"
+                                                                Grid.Column="0"
+                                                                Text="{Binding SourceItem.Name}"
+                                                                FontSize="14"
+                                                                FontWeight="SemiBold"
+                                                                Margin="0,0,0,2"
+                                                                TextTrimming="CharacterEllipsis" />
+
+                                                            <!-- 操作类型 -->
+                                                            <StackPanel
+                                                                Grid.Row="1"
+                                                                Grid.Column="0"
+                                                                Orientation="Horizontal"
+                                                                Margin="0,0,0,2">
+                                                                <ui:TextBlock
+                                                                    Text="操作: "
+                                                                    FontSize="12"
+                                                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}" />
+                                                                <ui:TextBlock
+                                                                    Text="{Binding Operation.OperationName}"
+                                                                    FontSize="12"
+                                                                    FontWeight="Medium" />
+                                                            </StackPanel>
+
+                                                            <!-- 创建时间 -->
+                                                            <StackPanel
+                                                                Grid.Row="0"
+                                                                Grid.Column="1"
+                                                                Orientation="Horizontal"
+                                                                Margin="0,0,0,2">
+                                                                <ui:TextBlock
+                                                                    Text="创建时间: "
+                                                                    FontSize="11"
+                                                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                                                    Margin="0,0,8,0" />
+                                                                <ui:TextBlock
+                                                                    Text="{Binding CreatedTime, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}'}"
+                                                                    FontSize="11" />
+                                                            </StackPanel>
+
+                                                            <!-- 开始时间 -->
+                                                            <StackPanel
+                                                                Grid.Row="1"
+                                                                Grid.Column="1"
+                                                                Orientation="Horizontal"
+                                                                Margin="0,0,0,2">
+                                                                <ui:TextBlock
+                                                                    Text="开始时间: "
+                                                                    FontSize="11"
+                                                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                                                    Margin="0,0,8,0"
+                                                                    Visibility="{Binding StartTime, Converter={StaticResource NullToVisibilityConverter}}" />
+                                                                <ui:TextBlock
+                                                                    Text="{Binding StartTime, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}'}"
+                                                                    FontSize="11"
+                                                                    Visibility="{Binding StartTime, Converter={StaticResource NullToVisibilityConverter}}" />
+                                                            </StackPanel>
+
+                                                            <!-- 结束时间 -->
+                                                            <StackPanel
+                                                                Grid.Row="2"
+                                                                Grid.Column="1"
+                                                                Orientation="Horizontal"
+                                                                Margin="0,0,0,2">
+                                                                <ui:TextBlock
+                                                                    Text="结束时间: "
+                                                                    FontSize="11"
+                                                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                                                    Margin="0,0,8,0"
+                                                                    Visibility="{Binding EndTime, Converter={StaticResource NullToVisibilityConverter}}" />
+                                                                <ui:TextBlock
+                                                                    Text="{Binding EndTime, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}'}"
+                                                                    FontSize="11"
+                                                                    Visibility="{Binding EndTime, Converter={StaticResource NullToVisibilityConverter}}" />
+                                                            </StackPanel>
+
+                                                            <!-- 错误信息（左下方，仅在有错误时显示） -->
+                                                            <StackPanel
+                                                                Grid.Row="2"
+                                                                Grid.Column="0"
+                                                                Orientation="Horizontal"
+                                                                Margin="0,0,0,2"
+                                                                Visibility="{Binding FailureMessage, Converter={StaticResource NullToVisibilityConverter}}">
+                                                                <ui:TextBlock
+                                                                    Text="错误信息: "
+                                                                    FontSize="11"
+                                                                    FontWeight="SemiBold"
+                                                                    Foreground="#E81123"
+                                                                    Visibility="{Binding EndTime, Converter={StaticResource NullToVisibilityConverter}}" />
+                                                                <ui:TextBlock
+                                                                    Text="{Binding FailureMessage}"
+                                                                    FontSize="11"
+                                                                    Foreground="#E81123" />
+                                                            </StackPanel>
+                                                        </Grid>
+                                                    </ui:Card>
+                                                </DataTemplate>
+                                            </ui:ListView.ItemTemplate>
+                                        </ui:ListView>
+
+                                        <!-- 空状态提示 -->
+                                        <ui:TextBlock
+                                            Grid.Row="1"
+                                            Text="无任务"
+                                            FontSize="13"
+                                            Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            Margin="0,20,0,0"
+                                            Visibility="{Binding TaskQueue.CurrentViewingTasks, Converter={StaticResource InverseNullToVisibilityConverter}, FallbackValue={x:Null}}" />
+                                    </Grid>
+                                </Border>
                             </Grid>
                         </ui:Card>
                     </DataTemplate>

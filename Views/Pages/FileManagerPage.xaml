@@ -8,7 +8,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     xmlns:graph="clr-namespace:Microsoft.Graph.Models;assembly=Microsoft.Graph"
-    xmlns:helpers="clr-namespace:OneDesk.Helpers"
+    xmlns:converters="clr-namespace:OneDesk.Helpers.Converters"
     Title="FileManagerPage"
     d:DataContext="{d:DesignInstance local:FileManagerPage,
                                      IsDesignTimeCreatable=False}"
@@ -20,7 +20,7 @@
     mc:Ignorable="d">
 
     <Page.Resources>
-        <helpers:FileSizeConverter x:Key="FileSizeConverter" />
+        <converters:FileSizeConverter x:Key="FileSizeConverter" />
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
     </Page.Resources>
 
