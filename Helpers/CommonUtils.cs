@@ -63,6 +63,65 @@ public class CommonUtils
         }).Task.Unwrap();
     }
 
+    public static async Task<string> ShowInputDialogAsync(string title, string message, string? defaultValue)
+    {
+        return await ShowInputDialogAsync(title, message, defaultValue, CancellationToken.None);
+    }
+
+    public static async Task<string> ShowInputDialogAsync(string title, string message, string? defaultValue, CancellationToken ct)
+    {
+        var buttonText = MsgButtonText.ConfirmCancel;
+        defaultValue ??= "";
+        return await Application.Current.Dispatcher.InvokeAsync(async () =>
+        {
+            var stackPanel = new System.Windows.Controls.StackPanel
+            {
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+
+            // 提示信息
+            var messageTextBox = new TextBox
+            {
+                Text = message,
+                TextWrapping = TextWrapping.Wrap,
+                IsTextSelectionEnabled = true,
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+            stackPanel.Children.Add(messageTextBox);
+
+            // 输入框
+            var inputTextBox = new TextBox
+            {
+                Text = defaultValue,
+                MinWidth = 280
+            };
+            stackPanel.Children.Add(inputTextBox);
+
+            var messageBox = new MessageBox
+            {
+                Title = title,
+                Content = stackPanel,
+                IsPrimaryButtonEnabled = true,
+                PrimaryButtonText = buttonText.PrimaryText,
+                IsSecondaryButtonEnabled = true,
+                SecondaryButtonText = buttonText.SecondaryText,
+                IsCloseButtonEnabled = false
+            };
+
+            // 设置焦点到输入框
+            inputTextBox.Loaded += (s, e) =>
+            {
+                inputTextBox.Focus();
+                inputTextBox.SelectAll();
+            };
+
+            var result = await messageBox.ShowDialogAsync(cancellationToken: ct);
+
+            // 如果用户点击确认，返回输入的文本；否则返回 空字符串
+            return result == MessageBoxResult.Primary ? inputTextBox.Text : "";
+        }).Task.Unwrap();
+    }
+
     public static string GetDriveId(DriveItem item)
     {
         // 如果 ParentReference 为 null，则认为是远程项，使用 RemoteItem 的 ParentReference
@@ -73,7 +132,7 @@ public class CommonUtils
 }
 
 /// <summary>
-/// 消息框按钮文本（类似枚举的结构体）
+/// 消息框按钮文本
 /// </summary>
 public readonly struct MsgButtonText
 {
