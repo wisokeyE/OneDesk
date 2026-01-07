@@ -36,7 +36,7 @@ public enum TaskStatus
 /// <summary>
 /// 任务信息类
 /// </summary>
-public partial class TaskInfo(UserInfo userInfo, ITaskOperation taskOperation, DriveItem sourceItem, DriveItem? destinationItem) : ObservableObject
+public partial class TaskInfo(UserInfo userInfo, ITaskOperation taskOperation, DriveItem sourceItem, DriveItem? destinationItem, Dictionary<string, object>? extraData) : ObservableObject
 {
     /// <summary>
     /// 用户信息
@@ -92,8 +92,14 @@ public partial class TaskInfo(UserInfo userInfo, ITaskOperation taskOperation, D
     [ObservableProperty]
     private string? _failureMessage;
 
+    /// <summary>
+    /// 额外数据（用于传输额外信息）
+    /// </summary>
+    [ObservableProperty]
+    private Dictionary<string, object>? _extraData = extraData;
+
     public TaskInfo(UserInfo userInfo, ITaskOperation taskOperation, DriveItem sourceItem)
-        : this(userInfo, taskOperation, sourceItem, null)
+        : this(userInfo, taskOperation, sourceItem, null, null)
     {
     }
 }

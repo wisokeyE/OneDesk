@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OneDesk.Services;
 using OneDesk.Services.Auth;
+using OneDesk.Services.Clipboard;
 using OneDesk.Services.Configuration;
 using OneDesk.Services.FileCommand;
 using OneDesk.Services.Tasks;
@@ -65,6 +66,9 @@ namespace OneDesk
 
                 // User Info management
                 services.AddSingleton<IUserInfoManager, UserInfoManager>();
+
+                // Clipboard Service
+                services.AddSingleton<IClipboardService, ClipboardService>();
 
                 // Task Scheduler
                 services.AddSingleton<ITaskScheduler, TaskScheduler>();

@@ -27,7 +27,7 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
@@ -115,28 +115,27 @@
         <!-- 文件列表 -->
         <Border Grid.Row="1" Background="{DynamicResource ControlFillColorDefaultBrush}"
                 BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
-            <StackPanel>
+            <Grid>
                 <ui:ListView x:Name="FileListView" ItemsSource="{Binding ViewModel.Items}"
-                             SelectionMode="Extended" MouseDoubleClick="FileListView_MouseDoubleClick"
+                             SelectionMode="Extended"
                              SelectionChanged="FileListView_SelectionChanged"
-                             Margin="0" BorderThickness="0" MaxHeight="410">
+                             ContextMenuOpening="FileListView_ContextMenuOpening"
+                             Margin="0" BorderThickness="0" Height="410">
+                    <ui:ListView.ContextMenu>
+                        <ContextMenu DataContext="{Binding PlacementTarget.DataContext.ViewModel, RelativeSource={RelativeSource Self}}"
+                                     ItemsSource="{Binding ContextMenuCommands}">
+                            <ContextMenu.ItemContainerStyle>
+                                <Style TargetType="MenuItem">
+                                    <Setter Property="Header" Value="{Binding Name}" />
+                                    <Setter Property="Command" Value="{Binding DataContext.ExecuteFileCommandCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                    <Setter Property="CommandParameter" Value="{Binding}" />
+                                </Style>
+                            </ContextMenu.ItemContainerStyle>
+                        </ContextMenu>
+                    </ui:ListView.ContextMenu>
                     <ui:ListView.ItemContainerStyle>
                         <Style TargetType="ui:ListViewItem" BasedOn="{StaticResource {x:Type ui:ListViewItem}}">
-                            <Setter Property="ContextMenu">
-                                <Setter.Value>
-                                    <ContextMenu DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}"
-                                                 ItemsSource="{Binding ContextMenuCommands}">
-                                        <ContextMenu.ItemContainerStyle>
-                                            <Style TargetType="MenuItem">
-                                                <Setter Property="Header" Value="{Binding Name}" />
-                                                <Setter Property="Command" Value="{Binding DataContext.ExecuteFileCommandCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
-                                                <Setter Property="CommandParameter" Value="{Binding}" />
-                                            </Style>
-                                        </ContextMenu.ItemContainerStyle>
-                                    </ContextMenu>
-                                </Setter.Value>
-                            </Setter>
-                            <Setter Property="Tag" Value="{Binding DataContext.ViewModel, RelativeSource={RelativeSource AncestorType=ui:ListView}}" />
+                            <EventSetter Event="MouseDoubleClick" Handler="ListViewItem_MouseDoubleClick" />
                         </Style>
                     </ui:ListView.ItemContainerStyle>
                     <ui:ListView.View>
@@ -175,24 +174,8 @@
                             <ui:GridViewColumn Header="类型" Width="200">
                                 <ui:GridViewColumn.CellTemplate>
                                     <DataTemplate DataType="{x:Type graph:DriveItem}">
-                                        <ui:TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="4,6">
-                                            <ui:TextBlock.Style>
-                                                <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-                                                    <Setter Property="Text" Value="{Binding File.MimeType, Mode=OneWay}" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding Folder}" Value="{x:Null}">
-                                                            <Setter Property="Text" Value="{Binding File.MimeType, Mode=OneWay}" />
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding Folder}" Value="{x:Null}" >
-                                                            <Setter Property="Text" Value="文件" />
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding Folder, Converter={x:Null}}" Value="False">
-                                                            <Setter Property="Text" Value="文件夹" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </ui:TextBlock.Style>
-                                        </ui:TextBlock>
+                                        <ui:TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="4,6"
+                                                      Text="{Binding File.MimeType, Mode=OneWay, FallbackValue=文件夹}"/>
                                     </DataTemplate>
                                 </ui:GridViewColumn.CellTemplate>
                             </ui:GridViewColumn>
@@ -213,7 +196,7 @@
                         Visibility="{Binding ViewModel.IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <ui:ProgressRing IsIndeterminate="True" Width="48" Height="48" />
                 </Border>
-            </StackPanel>
+            </Grid>
         </Border>
 
         <!-- 状态栏 -->

@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using OneDesk.Models;
 
 namespace OneDesk.Services.Configuration;
@@ -8,6 +9,11 @@ public class ConfigService : IConfigService, IDisposable
 {
     private readonly string _configFilePath = Path.Combine(AppContext.BaseDirectory, "appConfig.json");
     private readonly SemaphoreSlim _saveLock = new(1, 1);
+    private readonly JsonSerializerSettings _jsonSettings = new()
+    {
+        Formatting = Formatting.Indented,
+        Converters = { new StringEnumConverter() }
+    };
 
     public AppConfig Config { get; private set; } = new();
 
@@ -26,7 +32,7 @@ public class ConfigService : IConfigService, IDisposable
         }
 
         var json = await File.ReadAllTextAsync(_configFilePath);
-        var loaded = JsonConvert.DeserializeObject<AppConfig>(json);
+        var loaded = JsonConvert.DeserializeObject<AppConfig>(json, _jsonSettings);
         if (loaded != null)
         {
             Config.CopyConfig(loaded);
@@ -38,7 +44,7 @@ public class ConfigService : IConfigService, IDisposable
         await _saveLock.WaitAsync();
         try
         {
-            var json = JsonConvert.SerializeObject(Config, Formatting.Indented);
+            var json = JsonConvert.SerializeObject(Config, _jsonSettings);
             await File.WriteAllTextAsync(_configFilePath, json);
         }
         finally

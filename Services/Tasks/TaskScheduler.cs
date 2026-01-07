@@ -60,26 +60,26 @@ public class TaskScheduler : ITaskScheduler
         // 创建 AsyncContextThread
         _asyncContextThread = new AsyncContextThread();
 
-        // 在任务执行线程上初始化用户队列
-        _asyncContextThread.Factory.Run(async () =>
+        // 初始化用户队列
+        Application.Current.Dispatcher.Invoke(() =>
         {
-            await Application.Current.Dispatcher.InvokeAsync(() =>
+            foreach (var userInfo in _userInfoManager.UserInfos)
             {
-                foreach (var userInfo in _userInfoManager.UserInfos)
-                {
-                    var userQueue = new UserTaskQueue(userInfo);
-                    UserQueues.TryAdd(userInfo.UserId, userQueue);
-                    userInfo.TaskQueue = userQueue;
-                }
-            });
-
-            // 监听用户变化
-            if (_userInfoManager.UserInfos is INotifyCollectionChanged collection)
-            {
-                collection.CollectionChanged += OnUserInfosChanged;
+                var userQueue = new UserTaskQueue(userInfo);
+                UserQueues.TryAdd(userInfo.UserId, userQueue);
+                userInfo.TaskQueue = userQueue;
             }
+        });
 
-            // 启动消费者协程
+        // 监听用户变化
+        if (_userInfoManager.UserInfos is INotifyCollectionChanged collection)
+        {
+            collection.CollectionChanged += OnUserInfosChanged;
+        }
+
+        // 启动消费者协程
+        _asyncContextThread.Factory.Run(() =>
+        {
             for (var i = 0; i < MaxConcurrentTasks; i++)
             {
                 _ = ConsumerLoopAsync(i);

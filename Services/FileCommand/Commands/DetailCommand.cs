@@ -8,6 +8,8 @@ namespace OneDesk.Services.FileCommand.Commands;
 /// </summary>
 public class DetailCommand(IServiceProvider serviceProvider) : IFileCommand
 {
+    private FileDetailsWindow FileDetailsWindow => field ??= serviceProvider.GetRequiredService<FileDetailsWindow>();
+
     public string Name => "详情";
 
     public int Order => 100;
@@ -25,13 +27,10 @@ public class DetailCommand(IServiceProvider serviceProvider) : IFileCommand
 
         var selectedItem = context.SelectedItems[0];
 
-        // 从服务容器获取 FileDetailsWindow
-        var fileDetailsWindow = serviceProvider.GetRequiredService<FileDetailsWindow>();
-
         // 显示详情窗口
         await Application.Current.Dispatcher.InvokeAsync(() =>
         {
-            fileDetailsWindow.ShowWithFileDetails(selectedItem);
+            FileDetailsWindow.ShowWithFileDetails(selectedItem);
         });
     }
 }

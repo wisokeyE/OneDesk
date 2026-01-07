@@ -1,11 +1,14 @@
 using System.IO;
 using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
 using Microsoft.Graph.Models;
 using OneDesk.Models;
 using OneDesk.ViewModels.Pages;
 using OneDesk.Views.Windows;
 using Wpf.Ui.Abstractions.Controls;
 using ListView = Wpf.Ui.Controls.ListView;
+using ListViewItem = Wpf.Ui.Controls.ListViewItem;
 
 namespace OneDesk.Views.Pages;
 
@@ -24,10 +27,10 @@ public partial class FileManagerPage : INavigableView<FileManagerViewModel>
         _ = ViewModel.GetCurrentPathChildren();
     }
 
-    private void FileListView_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    private void ListViewItem_MouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
-        var selectedItem = FileListView.SelectedItem;
-        if (selectedItem is not DriveItem item) return;
+        if (sender is not ListViewItem listViewItem) return;
+        if (listViewItem.Content is not DriveItem item) return;
 
         // 如果是文件夹，进入文件夹
         if (item.Folder is not null)
@@ -67,5 +70,33 @@ public partial class FileManagerPage : INavigableView<FileManagerViewModel>
         {
             ViewModel.SwitchRootCommand.Execute(rootListView.SelectedItem);
         }
+    }
+
+    private void FileListView_ContextMenuOpening(object sender, ContextMenuEventArgs e)
+    {
+        // 获取鼠标位置
+        var mousePosition = Mouse.GetPosition(FileListView);
+
+        // 检查鼠标位置是否在列头上
+        var hitTestResult = VisualTreeHelper.HitTest(FileListView, mousePosition);
+        if (hitTestResult?.VisualHit == null) return;
+
+        // 查找是否点击在 GridViewColumnHeader 上
+        var header = FindVisualParent<GridViewColumnHeader>(hitTestResult.VisualHit);
+        if (header == null) return;
+
+        // 如果点击在列头上，取消菜单打开
+        e.Handled = true;
+    }
+
+    private static T? FindVisualParent<T>(DependencyObject child) where T : DependencyObject
+    {
+        var parentObject = VisualTreeHelper.GetParent(child);
+        return parentObject switch
+        {
+            null => null,
+            T parent => parent,
+            _ => FindVisualParent<T>(parentObject)
+        };
     }
 }

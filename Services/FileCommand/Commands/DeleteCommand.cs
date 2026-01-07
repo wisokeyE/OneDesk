@@ -12,6 +12,8 @@ namespace OneDesk.Services.FileCommand.Commands;
 /// </summary>
 public class DeleteCommand(IServiceProvider serviceProvider) : IFileCommand
 {
+    private ITaskScheduler TaskScheduler => field ??= serviceProvider.GetRequiredService<ITaskScheduler>();
+
     public string Name => "删除";
 
     public int Order => 90;
@@ -41,14 +43,11 @@ public class DeleteCommand(IServiceProvider serviceProvider) : IFileCommand
             return;
         }
 
-        // 从服务容器获取 TaskScheduler
-        var taskScheduler = serviceProvider.GetRequiredService<ITaskScheduler>();
-
         // 通过 TaskScheduler 为每个选中的项创建删除任务
         foreach (var item in context.SelectedItems)
         {
             var taskInfo = new TaskInfo(context.UserInfo, DeleteOperation.Instance, item);
-            await taskScheduler.AddTaskAsync(taskInfo);
+            await TaskScheduler.AddTaskAsync(taskInfo);
         }
     }
 }

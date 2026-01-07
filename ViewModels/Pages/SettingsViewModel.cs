@@ -71,5 +71,14 @@ namespace OneDesk.ViewModels.Pages
             }
             Config.Theme = CurrentTheme.ToString();
         }
+
+        [RelayCommand]
+        private void OnChangeConflictBehavior(string parameter)
+        {
+            if (Enum.TryParse<ConflictBehavior>(parameter, out var behavior))
+            {
+                Config.ConflictBehavior = behavior;
+            }
+        }
     }
 }

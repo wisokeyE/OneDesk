@@ -73,6 +73,32 @@
         <TextBlock Margin="0,12,0,0" Text="凭据文件夹路径" />
         <ui:TextBox Margin="0,4,0,0" Text="{Binding ViewModel.Config.CredentialFolderPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="文件夹路径" HorizontalAlignment="Left" Width="339" />
 
+        <TextBlock Margin="0,24,0,0" FontSize="20" FontWeight="Medium" Text="文件操作" />
+
+        <!-- ConflictBehavior -->
+        <TextBlock Margin="0,12,0,0" Text="名称冲突时的解决方案" />
+        <RadioButton
+            Margin="0,12,0,0"
+            Content="替换现有文件/文件夹"
+            GroupName="conflictBehavior"
+            IsChecked="{Binding ViewModel.Config.ConflictBehavior, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=replace, Mode=OneWay}"
+            Command="{Binding ViewModel.ChangeConflictBehaviorCommand, Mode=OneWay}"
+            CommandParameter="replace" />
+        <RadioButton
+            Margin="0,8,0,0"
+            Content="重命名新文件/文件夹"
+            GroupName="conflictBehavior"
+            IsChecked="{Binding ViewModel.Config.ConflictBehavior, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=rename, Mode=OneWay}"
+            Command="{Binding ViewModel.ChangeConflictBehaviorCommand, Mode=OneWay}"
+            CommandParameter="rename" />
+        <RadioButton
+            Margin="0,8,0,0"
+            Content="失败并报错"
+            GroupName="conflictBehavior"
+            IsChecked="{Binding ViewModel.Config.ConflictBehavior, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=fail, Mode=OneWay}"
+            Command="{Binding ViewModel.ChangeConflictBehaviorCommand, Mode=OneWay}"
+            CommandParameter="fail" />
+
         <TextBlock Margin="0,24,0,0" FontSize="20" FontWeight="Medium" Text="关于 OneDesk" />
         <TextBlock Margin="0,12,0,0" Text="{Binding ViewModel.AppVersion, Mode=OneWay}" />
     </StackPanel>

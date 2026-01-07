@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Graph.Models;
 using OneDesk.Helpers;
+using OneDesk.Models;
 using OneDesk.Models.Tasks;
 using OneDesk.Models.Tasks.Operations;
 using OneDesk.Services.Tasks;
@@ -12,6 +13,9 @@ namespace OneDesk.Services.FileCommand.Commands;
 /// </summary>
 public class CreateFolderCommand(IServiceProvider serviceProvider) : IFileCommand
 {
+    private ITaskScheduler TaskScheduler => field ??= serviceProvider.GetRequiredService<ITaskScheduler>();
+    private AppConfig Config => field ??= serviceProvider.GetRequiredService<AppConfig>();
+
     public string Name => "新建文件夹";
 
     public int Order => 10;
@@ -42,18 +46,26 @@ public class CreateFolderCommand(IServiceProvider serviceProvider) : IFileComman
             return;
         }
 
-        // 从服务容器获取 TaskScheduler
-        var taskScheduler = serviceProvider.GetRequiredService<ITaskScheduler>();
-
         // 创建一个临时的 DriveItem 来存储文件夹名称
         var newFolderItem = new DriveItem
         {
             Name = folderName
         };
 
-        // 创建任务，DestinationItem 为父文件夹，SourceItem 存储新文件夹名称
-        var taskInfo = new TaskInfo(context.UserInfo, CreateFolderOperation.Instance, newFolderItem, context.CurrentFolder);
+        // 创建额外数据，传递 ConflictBehavior 配置
+        var extraData = new Dictionary<string, object>
+        {
+            {
+                "AdditionalData", new Dictionary<string, object>
+                {
+                    { "@microsoft.graph.conflictBehavior", Enum.GetName(Config.ConflictBehavior)! }
+                }
+            }
+        };
 
-        await taskScheduler.AddTaskAsync(taskInfo);
+        // 创建任务，DestinationItem 为父文件夹，SourceItem 存储新文件夹名称
+        var taskInfo = new TaskInfo(context.UserInfo, CreateFolderOperation.Instance, newFolderItem, context.CurrentFolder, extraData);
+
+        await TaskScheduler.AddTaskAsync(taskInfo);
     }
 }

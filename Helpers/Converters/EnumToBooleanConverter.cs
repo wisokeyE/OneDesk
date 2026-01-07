@@ -1,6 +1,5 @@
 ﻿using System.Globalization;
 using System.Windows.Data;
-using Wpf.Ui.Appearance;
 
 namespace OneDesk.Helpers.Converters;
 
@@ -15,23 +14,33 @@ internal class EnumToBooleanConverter : IValueConverter
 
         if (parameter is not string enumString)
         {
-            throw new ArgumentException("ExceptionEnumToBooleanConverterParameterMustBeAnEnumName");
+            throw new ArgumentException("参数必须是枚举值名称字符串");
         }
 
-        if (!Enum.IsDefined(typeof(ApplicationTheme), value))
+        var type = value.GetType();
+
+        if (!type.IsEnum)
         {
-            throw new ArgumentException("ExceptionEnumToBooleanConverterValueMustBeAnEnum");
+            throw new ArgumentException("值必须是枚举类型");
         }
 
-        var enumValue = Enum.Parse<ApplicationTheme>(enumString);
+        var enumValue = Enum.Parse(type, enumString);
 
         return enumValue.Equals(value);
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        return parameter is not string enumString
-            ? throw new ArgumentException("ExceptionEnumToBooleanConverterParameterMustBeAnEnumName")
-            : Enum.Parse<ApplicationTheme>(enumString);
+        if (parameter is not string enumString)
+        {
+            throw new ArgumentException("参数必须是枚举值名称字符串");
+        }
+
+        if (!targetType.IsEnum)
+        {
+            throw new ArgumentException("目标类型必须是枚举类型");
+        }
+
+        return Enum.Parse(targetType, enumString);
     }
 }

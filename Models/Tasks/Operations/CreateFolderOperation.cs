@@ -19,6 +19,8 @@ public class CreateFolderOperation : ITaskOperation
     {
     }
 
+    private static readonly Dictionary<string, object> EmptyDictionary = [];
+
     /// <summary>
     /// 操作名称
     /// </summary>
@@ -50,10 +52,7 @@ public class CreateFolderOperation : ITaskOperation
         {
             Name = taskInfo.SourceItem.Name,
             Folder = new Folder(),
-            AdditionalData = new Dictionary<string, object>
-            {
-                { "@microsoft.graph.conflictBehavior", "rename" }
-            }
+            AdditionalData = taskInfo.ExtraData?["AdditionalData"] as IDictionary<string, object> ?? EmptyDictionary
         };
 
         // 在父文件夹下创建新文件夹
