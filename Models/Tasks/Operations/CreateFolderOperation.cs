@@ -52,7 +52,7 @@ public class CreateFolderOperation : ITaskOperation
         {
             Name = taskInfo.SourceItem.Name,
             Folder = new Folder(),
-            AdditionalData = taskInfo.ExtraData?["AdditionalData"] as IDictionary<string, object> ?? EmptyDictionary
+            AdditionalData = CommonUtils.GetValueOrDefault(taskInfo.ExtraData, "AdditionalData", EmptyDictionary)
         };
 
         // 在父文件夹下创建新文件夹

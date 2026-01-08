@@ -23,4 +23,15 @@ public interface ITaskScheduler : IDisposable
     /// </summary>
     /// <param name="taskInfo">任务信息</param>
     Task AddTaskAsync(TaskInfo taskInfo);
+
+    /// <summary>
+    /// 添加任务到优先队列
+    /// </summary>
+    /// <param name="taskInfo">任务信息</param>
+    Task AddPriorityTaskAsync(TaskInfo taskInfo);
+
+    /// <summary>
+    /// 优先任务完成事件
+    /// </summary>
+    event EventHandler? PriorityTaskCompleted;
 }

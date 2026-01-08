@@ -5,6 +5,8 @@ using OneDesk.Helpers;
 using OneDesk.Models;
 using OneDesk.Services.Auth;
 using OneDesk.Services.FileCommand;
+using OneDesk.Services.Tasks;
+using Application = System.Windows.Application;
 
 namespace OneDesk.ViewModels.Pages;
 
@@ -33,9 +35,12 @@ public partial class FileManagerViewModel : ObservableObject
 
     [ObservableProperty]
     private IReadOnlyList<IFileCommand> _contextMenuCommands = [];
-    
+
     [ObservableProperty]
     private IFileCommandRegistry _commandRegistry;
+
+    [ObservableProperty]
+    private ITaskScheduler _taskScheduler;
 
     public Item CurrentFolder => BreadcrumbItems[^1];
 
@@ -61,10 +66,14 @@ public partial class FileManagerViewModel : ObservableObject
         };
     }
 
-    public FileManagerViewModel(IUserInfoManager userInfoManager, IFileCommandRegistry commandRegistry)
+    public FileManagerViewModel(IUserInfoManager userInfoManager, IFileCommandRegistry commandRegistry, ITaskScheduler taskScheduler)
     {
         _userInfoManager = userInfoManager;
         _commandRegistry = commandRegistry;
+        _taskScheduler = taskScheduler;
+
+        // 监听优先任务完成事件
+        _taskScheduler.PriorityTaskCompleted += OnPriorityTaskCompleted;
 
         // 初始集合的监听会在 OnBreadcrumbItemsChanged 中设置
         OnBreadcrumbItemsChanged(BreadcrumbItems);
@@ -76,6 +85,16 @@ public partial class FileManagerViewModel : ObservableObject
             RootIndex = 0;
             _ = GetCurrentPathChildren();
         };
+    }
+
+    /// <summary>
+    /// 优先任务完成事件处理
+    /// </summary>
+    private void OnPriorityTaskCompleted(object? sender, EventArgs e)
+    {
+        // 不重复刷新
+        if (IsLoading) return;
+        Application.Current.Dispatcher.Invoke(OnRefresh);
     }
 
     private void UpdateContextMenuCommands()
@@ -129,6 +148,8 @@ public partial class FileManagerViewModel : ObservableObject
             IsLoading = false;
             UserInfoManager.IsLocked = false;
         }
+        // 每次载入文件列表后更新右键菜单项
+        UpdateContextMenuCommands();
     }
 
     [RelayCommand]

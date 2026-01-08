@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Collections.Specialized;
 using System.Threading.Channels;
 using Nito.AsyncEx;
+using OneDesk.Helpers;
 using OneDesk.Models;
 using OneDesk.Models.Tasks;
 using OneDesk.Services.Auth;
@@ -18,6 +19,11 @@ public class TaskScheduler : ITaskScheduler
     /// 全局任务队列（私有）
     /// </summary>
     private readonly Channel<TaskInfo> _globalQueue;
+
+    /// <summary>
+    /// 优先任务队列（私有）
+    /// </summary>
+    private readonly Channel<TaskInfo> _priorityQueue;
 
     /// <summary>
     /// 用户任务队列映射（用户ID -> UserTaskQueue）
@@ -44,6 +50,16 @@ public class TaskScheduler : ITaskScheduler
     /// </summary>
     private readonly IUserInfoManager _userInfoManager;
 
+    /// <summary>
+    /// 优先任务完成事件
+    /// </summary>
+    public event EventHandler? PriorityTaskCompleted;
+
+    /// <summary>
+    /// 用于控制优先任务完成事件触发频率的防抖器
+    /// </summary>
+    private readonly AsyncDebouncer _priorityTaskCompletedDebouncer;
+
     public TaskScheduler(IUserInfoManager userInfoManager)
     {
         _userInfoManager = userInfoManager;
@@ -55,7 +71,20 @@ public class TaskScheduler : ITaskScheduler
             SingleWriter = false
         });
 
+        // 创建无界通道作为优先队列
+        _priorityQueue = Channel.CreateUnbounded<TaskInfo>(new UnboundedChannelOptions
+        {
+            SingleReader = false,
+            SingleWriter = false
+        });
+
         _cancellationTokenSource = new CancellationTokenSource();
+
+        // 初始化优先任务完成事件防抖器，延迟 300ms，最大等待 1000ms
+        _priorityTaskCompletedDebouncer = new AsyncDebouncer(200, 1000, () =>
+        {
+            PriorityTaskCompleted?.Invoke(this, EventArgs.Empty);
+        });
 
         // 创建 AsyncContextThread
         _asyncContextThread = new AsyncContextThread();
@@ -85,6 +114,9 @@ public class TaskScheduler : ITaskScheduler
                 _ = ConsumerLoopAsync(i);
             }
         });
+
+        // 启动优先队列消费者（独立线程）
+        _ = Task.Run(PriorityConsumerLoopAsync);
     }
 
     /// <summary>
@@ -173,6 +205,16 @@ public class TaskScheduler : ITaskScheduler
     }
 
     /// <summary>
+    /// 添加任务到优先队列
+    /// </summary>
+    /// <param name="taskInfo">任务信息</param>
+    public async Task AddPriorityTaskAsync(TaskInfo taskInfo)
+    {
+        // 优先队列任务不放入用户队列，直接添加到优先队列
+        await _priorityQueue.Writer.WriteAsync(taskInfo, _cancellationTokenSource.Token);
+    }
+
+    /// <summary>
     /// 消费者循环，从队列中取任务并执行
     /// </summary>
     /// <param name="consumerId">消费者ID</param>
@@ -215,7 +257,8 @@ public class TaskScheduler : ITaskScheduler
     /// 执行任务的主体方法
     /// </summary>
     /// <param name="taskInfo">任务信息</param>
-    private async Task ExecuteTaskAsync(TaskInfo taskInfo)
+    /// <param name="addToCompletedQueue">是否将任务添加到已完成队列</param>
+    private async Task ExecuteTaskAsync(TaskInfo taskInfo, bool addToCompletedQueue = true)
     {
         var userId = taskInfo.UserInfo.UserId;
         var cancellationToken = _cancellationTokenSource.Token;
@@ -229,10 +272,10 @@ public class TaskScheduler : ITaskScheduler
                 throw new InvalidOperationException($"任务状态异常：期望 Pending 或 Cancelled，实际为 {currentStatus}");
             }
 
-            // 如果任务已被取消，直接移动到已结束队列
+            // 如果任务已被取消，直接移动到已结束队列（如果需要）
             if (currentStatus == TaskStatus.Cancelled)
             {
-                if (UserQueues.TryGetValue(userId, out var cancelledUserQueue))
+                if (addToCompletedQueue && UserQueues.TryGetValue(userId, out var cancelledUserQueue))
                 {
                     await Application.Current.Dispatcher.InvokeAsync(() =>
                     {
@@ -280,13 +323,48 @@ public class TaskScheduler : ITaskScheduler
         }
         finally
         {
-            // 将任务移动到已结束队列
-            if (UserQueues.TryGetValue(userId, out var userQueue))
+            // 将任务移动到已结束队列（如果需要）
+            if (addToCompletedQueue && UserQueues.TryGetValue(userId, out var userQueue))
             {
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     userQueue.AddCompletedTask(taskInfo);
                 });
+            }
+        }
+    }
+
+    /// <summary>
+    /// 优先队列消费者循环，专门处理优先任务
+    /// </summary>
+    private async Task PriorityConsumerLoopAsync()
+    {
+        while (!_cancellationTokenSource.Token.IsCancellationRequested)
+        {
+            try
+            {
+                // 从优先队列中读取任务
+                var taskInfo = await _priorityQueue.Reader.ReadAsync(_cancellationTokenSource.Token);
+                var userId = taskInfo.UserInfo.UserId;
+
+                // 如果用户队列不存在，任务无效，直接跳过
+                if (!UserQueues.TryGetValue(userId, out _)) continue;
+
+                // 执行优先任务（不放入已完成队列）
+                await ExecuteTaskAsync(taskInfo, false);
+
+                // 任务完成后通过防抖器触发事件
+                _priorityTaskCompletedDebouncer.Invoke();
+            }
+            catch (OperationCanceledException)
+            {
+                // 取消令牌被触发，退出循环
+                break;
+            }
+            catch (Exception ex)
+            {
+                // 记录错误但继续运行
+                System.Diagnostics.Debug.WriteLine($"优先队列消费者发生异常: {ex.Message}");
             }
         }
     }
@@ -304,9 +382,13 @@ public class TaskScheduler : ITaskScheduler
 
         _cancellationTokenSource.Cancel();
         _globalQueue.Writer.Complete();
+        _priorityQueue.Writer.Complete();
 
         // 释放 AsyncContextThread
         _asyncContextThread.Join();
+
+        // 释放防抖器
+        _priorityTaskCompletedDebouncer.Dispose();
 
         _cancellationTokenSource.Dispose();
         GC.SuppressFinalize(this);

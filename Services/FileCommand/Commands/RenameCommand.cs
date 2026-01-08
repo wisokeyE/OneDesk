@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Graph.Models;
 using OneDesk.Helpers;
 using OneDesk.Models;
 using OneDesk.Models.Tasks;
@@ -9,21 +8,22 @@ using OneDesk.Services.Tasks;
 namespace OneDesk.Services.FileCommand.Commands;
 
 /// <summary>
-/// 新建文件夹命令，用于在当前目录下创建新文件夹
+/// 重命名命令，用于重命名选中的文件或文件夹
 /// </summary>
-public class CreateFolderCommand(IServiceProvider serviceProvider) : IFileCommand
+public class RenameCommand(IServiceProvider serviceProvider) : IFileCommand
 {
     private ITaskScheduler TaskScheduler => field ??= serviceProvider.GetRequiredService<ITaskScheduler>();
+
     private AppConfig Config => field ??= serviceProvider.GetRequiredService<AppConfig>();
 
-    public string Name => "新建文件夹";
+    public string Name => "重命名";
 
-    public int Order => 10;
+    public int Order => 30;
 
     public bool CanExecute(FileCommandContext context)
     {
-        // 需要有当前文件夹才能执行
-        return context.CurrentFolder != null;
+        // 只能重命名单个文件或文件夹
+        return context.SelectedItems.Count == 1;
     }
 
     public async Task ExecuteAsync(FileCommandContext context)
@@ -33,28 +33,32 @@ public class CreateFolderCommand(IServiceProvider serviceProvider) : IFileComman
             return;
         }
 
-        // 弹出输入对话框，要求用户输入文件夹名称
-        var folderName = await CommonUtils.ShowInputDialogAsync(
-            "新建文件夹",
-            "请输入文件夹名称：",
-            "新建文件夹"
+        var selectedItem = context.SelectedItems[0];
+        var currentName = selectedItem.Name ?? string.Empty;
+
+        // 弹出输入对话框，要求用户输入新名称
+        var newName = await CommonUtils.ShowInputDialogAsync(
+            "重命名",
+            "请输入新名称：",
+            currentName
         );
 
         // 用户取消或输入为空
-        if (string.IsNullOrWhiteSpace(folderName))
+        if (string.IsNullOrWhiteSpace(newName))
         {
             return;
         }
 
-        // 创建一个临时的 DriveItem 来存储文件夹名称
-        var newFolderItem = new DriveItem
+        // 如果名称没有变化，直接返回
+        if (newName == currentName)
         {
-            Name = folderName
-        };
+            return;
+        }
 
-        // 创建额外数据，传递 ConflictBehavior 配置
+        // 创建额外数据，传递新名称
         var extraData = new Dictionary<string, object>
         {
+            { "NewName", newName },
             {
                 "AdditionalData", new Dictionary<string, object>
                 {
@@ -63,8 +67,9 @@ public class CreateFolderCommand(IServiceProvider serviceProvider) : IFileComman
             }
         };
 
-        // 创建任务，DestinationItem 为父文件夹，SourceItem 存储新文件夹名称
-        var taskInfo = new TaskInfo(context.UserInfo, CreateFolderOperation.Instance, newFolderItem, context.CurrentFolder, extraData);
+        // 创建任务，复用 MoveOperation
+        // SourceItem 为要重命名的项，DestinationItem 为其父文件夹（保持在原位置）
+        var taskInfo = new TaskInfo(context.UserInfo, MoveOperation.Instance, selectedItem, context.CurrentFolder, extraData);
 
         await TaskScheduler.AddPriorityTaskAsync(taskInfo);
     }

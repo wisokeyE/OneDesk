@@ -56,8 +56,9 @@ public class MoveOperation : ITaskOperation
         var updateItem = new DriveItem
         {
             ParentReference = parentReference,
-            Name = taskInfo.SourceItem.Name,
-            AdditionalData = taskInfo.ExtraData?["AdditionalData"] as IDictionary<string, object> ?? EmptyDictionary
+            // 如果 ExtraData 中有 NewName，使用新名称，否则使用原名称
+            Name = CommonUtils.GetValueOrDefault(taskInfo.ExtraData, "NewName", taskInfo.SourceItem.Name),
+            AdditionalData = CommonUtils.GetValueOrDefault(taskInfo.ExtraData, "AdditionalData", EmptyDictionary)
         };
 
         await taskInfo.UserInfo.Client.Drives[destinationDriveId]

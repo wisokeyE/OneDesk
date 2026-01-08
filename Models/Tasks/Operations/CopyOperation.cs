@@ -85,7 +85,7 @@ public class CopyOperation : ITaskOperation
             {
                 ParentReference = parentReference,
                 Name = taskInfo.SourceItem.Name,
-                AdditionalData = taskInfo.ExtraData?["AdditionalData"] as IDictionary<string, object> ?? EmptyDictionary
+                AdditionalData = CommonUtils.GetValueOrDefault(taskInfo.ExtraData, "AdditionalData", EmptyDictionary)
             }, cancellationToken: cancellationToken);
     }
 

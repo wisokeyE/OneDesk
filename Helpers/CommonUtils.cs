@@ -129,6 +129,12 @@ public class CommonUtils
         var driveId = parentReference.DriveId!;
         return driveId;
     }
+
+    public static T GetValueOrDefault<T>(IDictionary<string, object>? dict, string key, T defaultValue)
+    {
+        if (dict is null || !dict.TryGetValue(key, out var v)) return defaultValue;
+        return v is not T value ? defaultValue : value;
+    }
 }
 
 /// <summary>
