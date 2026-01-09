@@ -76,6 +76,9 @@ namespace OneDesk
                 // File Command Registry
                 services.AddSingleton<IFileCommandRegistry, FileCommandRegistry>();
 
+                // HttpClient for monitoring copy operations
+                services.AddHttpClient("MonitorCopy");
+
                 services.AddSingleton<FileManagerPage>();
                 services.AddSingleton<FileManagerViewModel>();
                 services.AddSingleton<TaskManagerPage>();

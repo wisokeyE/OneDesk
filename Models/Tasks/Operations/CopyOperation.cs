@@ -1,6 +1,10 @@
+using System.Net;
+using System.Net.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Graph.Drives.Item.Items.Item.Copy;
 using Microsoft.Graph.Models;
+using Microsoft.Kiota.Abstractions;
+using Newtonsoft.Json;
 using OneDesk.Helpers;
 using OneDesk.Services.Tasks;
 
@@ -25,6 +29,7 @@ public class CopyOperation : ITaskOperation
     private static readonly Dictionary<string, object> EmptyDictionary = [];
 
     private ITaskScheduler TaskScheduler => field ??= App.Services.GetRequiredService<ITaskScheduler>();
+    private HttpClient MonitorHttpClient => field ??= App.Services.GetRequiredService<IHttpClientFactory>().CreateClient("MonitorCopy");
 
     /// <summary>
     /// 操作名称
@@ -60,14 +65,14 @@ public class CopyOperation : ITaskOperation
         else
         {
             // 源是文件，直接复制
-            await CopyFileAsync(taskInfo, destinationDriveId, cancellationToken);
+            await CopyFileAsync(taskInfo, sourceDriveId, destinationDriveId, cancellationToken);
         }
     }
 
     /// <summary>
     /// 复制文件
     /// </summary>
-    private static async Task CopyFileAsync(TaskInfo taskInfo, string destinationDriveId, CancellationToken cancellationToken)
+    private async Task CopyFileAsync(TaskInfo taskInfo, string sourceDriveId, string destinationDriveId, CancellationToken cancellationToken)
     {
         // 构造目标父文件夹引用
         var parentReference = new ItemReference
@@ -77,8 +82,10 @@ public class CopyOperation : ITaskOperation
         };
 
         // 执行复制操作
+        var nativeResponseHandler = new NativeResponseHandler();
+
         var client = taskInfo.UserInfo.Client;
-        await client.Drives[destinationDriveId]
+        await client.Drives[sourceDriveId]
             .Items[taskInfo.SourceItem.Id!]
             .Copy
             .PostAsync(new CopyPostRequestBody
@@ -86,7 +93,37 @@ public class CopyOperation : ITaskOperation
                 ParentReference = parentReference,
                 Name = taskInfo.SourceItem.Name,
                 AdditionalData = CommonUtils.GetValueOrDefault(taskInfo.ExtraData, "AdditionalData", EmptyDictionary)
+            }, requestConfiguration =>
+            {
+                requestConfiguration.Options.Add(new ResponseHandlerOption
+                {
+                    ResponseHandler = nativeResponseHandler
+                });
             }, cancellationToken: cancellationToken);
+        var responseMessage = nativeResponseHandler.Value as HttpResponseMessage;
+
+        // 检查响应是否成功
+        if (responseMessage is not { IsSuccessStatusCode: true })
+        {
+            var statusCode = responseMessage?.StatusCode.ToString() ?? "Unknown";
+            throw new InvalidOperationException($"复制操作失败，HTTP 状态码: {statusCode}");
+        }
+
+        switch (responseMessage.StatusCode)
+        {
+            case HttpStatusCode.Accepted:
+            {
+                // 复制操作异步进行，需轮询检查状态
+                var monitorUrl = responseMessage.Headers.Location ?? throw new InvalidOperationException("复制操作返回 202 Accepted，但未提供监控 URL");
+                await MonitorCopy(monitorUrl, cancellationToken);
+                break;
+            }
+            case HttpStatusCode.Created:
+                // 复制操作同步完成
+                break;
+            default:
+                throw new InvalidOperationException($"复制操作异常，HTTP 状态码: {responseMessage.StatusCode}");
+        }
     }
 
     /// <summary>
@@ -144,6 +181,47 @@ public class CopyOperation : ITaskOperation
         {
             var childTaskInfo = new TaskInfo(taskInfo.UserInfo, Instance, childItem, targetFolder, taskInfo.ExtraData);
             await TaskScheduler.AddTaskAsync(childTaskInfo);
+        }
+    }
+
+    private async Task MonitorCopy(Uri monitorUrl, CancellationToken cancellationToken)
+    {
+        var result = await MonitorHttpClient.GetAsync(monitorUrl, cancellationToken);
+
+        if (!result.IsSuccessStatusCode)
+        {
+            throw new InvalidOperationException($"监控复制任务失败，HTTP 状态码: {result.StatusCode}");
+        }
+
+        var content = await result.Content.ReadAsStringAsync(cancellationToken);
+        var dict = JsonConvert.DeserializeObject<IDictionary<string, object>>(content);
+        var status = CommonUtils.GetValueOrDefault(dict, "status", "completed");
+
+        // 轮询检查任务状态
+        while (status is "notStarted" or "inProgress" or "waiting")
+        {
+            await Task.Delay(200, cancellationToken);
+
+            result = await MonitorHttpClient.GetAsync(monitorUrl, cancellationToken);
+            if (!result.IsSuccessStatusCode)
+            {
+                throw new InvalidOperationException($"监控复制任务失败，HTTP 状态码: {result.StatusCode}");
+            }
+
+            content = await result.Content.ReadAsStringAsync(cancellationToken);
+            dict = JsonConvert.DeserializeObject<IDictionary<string, object>>(content);
+            status = CommonUtils.GetValueOrDefault(dict, "status", "completed");
+        }
+
+        if (status == "failed")
+        {
+            var errorMessage = CommonUtils.GetValueOrDefault(dict, "error", "未知错误");
+            throw new InvalidOperationException($"复制任务失败: {errorMessage}");
+        }
+
+        if (status != "completed")
+        {
+            throw new InvalidOperationException($"复制任务结束，但状态异常: {status}");
         }
     }
 }

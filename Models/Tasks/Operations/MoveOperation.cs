@@ -43,6 +43,7 @@ public class MoveOperation : ITaskOperation
             throw new InvalidOperationException("目标项或目标项 ID 不能为空");
         }
 
+        var sourceDriveId = CommonUtils.GetDriveId(taskInfo.SourceItem);
         var destinationDriveId = CommonUtils.GetDriveId(taskInfo.DestinationItem);
 
         // 构造目标父文件夹引用
@@ -61,7 +62,7 @@ public class MoveOperation : ITaskOperation
             AdditionalData = CommonUtils.GetValueOrDefault(taskInfo.ExtraData, "AdditionalData", EmptyDictionary)
         };
 
-        await taskInfo.UserInfo.Client.Drives[destinationDriveId]
+        await taskInfo.UserInfo.Client.Drives[sourceDriveId]
             .Items[taskInfo.SourceItem.Id]
             .PatchAsync(updateItem, cancellationToken: cancellationToken);
     }
