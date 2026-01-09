@@ -13,8 +13,9 @@ namespace OneDesk.Models;
 
 public partial class UserInfo : ObservableObject, IDisposable
 {
-    [ObservableProperty]
-    private int _userId;
+    private static long _nextId;
+
+    public long UserId { get; }
 
     [ObservableProperty]
     private string _displayName = "未知用户";
@@ -49,18 +50,18 @@ public partial class UserInfo : ObservableObject, IDisposable
     [ObservableProperty]
     private UserTaskQueue? _taskQueue;
 
-    public GraphServiceClient Client { get; private set; }
+    public GraphServiceClient Client { get; }
 
-    public TokenCredential Credential { get; private set; }
+    public TokenCredential Credential { get; }
 
     public Task InitializationTask { get; }
 
-    public UserInfo(GraphServiceClient client, TokenCredential credential, string filePath, int userId)
+    public UserInfo(GraphServiceClient client, TokenCredential credential, string filePath)
     {
         Client = client;
         Credential = credential;
         UserInfoFilePath = filePath;
-        UserId = userId;
+        UserId = Interlocked.Increment(ref _nextId);
         InitializationTask = InitUserInfoAsync();
     }
 

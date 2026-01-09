@@ -38,6 +38,13 @@ public enum TaskStatus
 /// </summary>
 public partial class TaskInfo(UserInfo userInfo, ITaskOperation taskOperation, DriveItem sourceItem, DriveItem? destinationItem, Dictionary<string, object>? extraData) : ObservableObject
 {
+    private static long _nextId;
+
+    /// <summary>
+    /// 递增Id，应用不重启期间唯一标识任务
+    /// </summary>
+    public long Id { get; }
+
     /// <summary>
     /// 用户信息
     /// </summary>
@@ -61,6 +68,12 @@ public partial class TaskInfo(UserInfo userInfo, ITaskOperation taskOperation, D
     /// </summary>
     [ObservableProperty]
     private DateTime? _endTime;
+
+    /// <summary>
+    /// 任务进度（0.0 到 100.0）
+    /// </summary>
+    [ObservableProperty]
+    private double _progress;
 
     /// <summary>
     /// 任务状态
@@ -101,5 +114,6 @@ public partial class TaskInfo(UserInfo userInfo, ITaskOperation taskOperation, D
     public TaskInfo(UserInfo userInfo, ITaskOperation taskOperation, DriveItem sourceItem)
         : this(userInfo, taskOperation, sourceItem, null, null)
     {
+        Id = Interlocked.Increment(ref _nextId);
     }
 }

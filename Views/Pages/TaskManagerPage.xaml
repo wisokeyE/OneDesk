@@ -115,7 +115,7 @@
                                             HorizontalAlignment="Center"
                                             Margin="0,0,0,4" />
                                         <ui:TextBlock
-                                            Text="{Binding TaskQueue.RunningTaskCount, FallbackValue=0}"
+                                            Text="{Binding TaskQueue.RunningTasks.Count, FallbackValue=0}"
                                             FontSize="20"
                                             FontWeight="Bold"
                                             HorizontalAlignment="Center" />
@@ -297,17 +297,16 @@
                                                         Grid.Row="1"
                                                         Grid.Column="1"
                                                         Orientation="Horizontal"
-                                                        Margin="0,0,0,2">
+                                                        Margin="0,0,0,2"
+                                                        Visibility="{Binding StartTime, Converter={StaticResource NullToVisibilityConverter}}">
                                                         <ui:TextBlock
                                                             Text="开始时间: "
                                                             FontSize="11"
                                                             Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                                                            Margin="0,0,8,0"
-                                                            Visibility="{Binding StartTime, Converter={StaticResource NullToVisibilityConverter}}" />
+                                                            Margin="0,0,8,0" />
                                                         <ui:TextBlock
                                                             Text="{Binding StartTime, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}'}"
-                                                            FontSize="11"
-                                                            Visibility="{Binding StartTime, Converter={StaticResource NullToVisibilityConverter}}" />
+                                                            FontSize="11" />
                                                     </StackPanel>
 
                                                     <!-- 结束时间 -->
@@ -315,19 +314,18 @@
                                                         Grid.Row="2"
                                                         Grid.Column="1"
                                                         Orientation="Horizontal"
-                                                        Margin="0,0,0,2">
+                                                        Margin="0,0,0,2"
+                                                        Visibility="{Binding EndTime, Converter={StaticResource NullToVisibilityConverter}}">
                                                         <ui:TextBlock
                                                             Text="结束时间: "
                                                             FontSize="11"
                                                             Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                                                            Margin="0,0,8,0"
-                                                            Visibility="{Binding EndTime, Converter={StaticResource NullToVisibilityConverter}}" />
+                                                            Margin="0,0,8,0" />
                                                         <ui:TextBlock
                                                             Text="{Binding EndTime, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}'}"
-                                                            FontSize="11"
-                                                            Visibility="{Binding EndTime, Converter={StaticResource NullToVisibilityConverter}}" />
+                                                            FontSize="11" />
                                                     </StackPanel>
-
+                                                    
                                                     <!-- 错误信息（左下方，仅在有错误时显示） -->
                                                     <StackPanel
                                                         Grid.Row="2"
@@ -339,12 +337,28 @@
                                                             Text="错误信息: "
                                                             FontSize="11"
                                                             FontWeight="SemiBold"
-                                                            Foreground="#E81123"
-                                                            Visibility="{Binding EndTime, Converter={StaticResource NullToVisibilityConverter}}" />
+                                                            Foreground="#E81123" />
                                                         <ui:TextBlock
                                                             Text="{Binding FailureMessage}"
                                                             FontSize="11"
                                                             Foreground="#E81123" />
+                                                    </StackPanel>
+
+                                                    <!-- 任务进度 -->
+                                                    <StackPanel
+                                                        Grid.Row="2"
+                                                        Grid.Column="0"
+                                                        Orientation="Horizontal"
+                                                        Margin="0,0,0,2"
+                                                        Visibility="{Binding FailureMessage, Converter={StaticResource InverseNullToVisibilityConverter}}">
+                                                        <ui:TextBlock
+                                                            Text="任务进度: "
+                                                            FontSize="11"
+                                                            Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                                            Margin="0,0,8,0" />
+                                                        <ui:TextBlock
+                                                            Text="{Binding Progress, StringFormat='{}{0:F1}%'}"
+                                                            FontSize="11" />
                                                     </StackPanel>
                                                 </Grid>
                                             </ui:Card>

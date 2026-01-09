@@ -1,11 +1,11 @@
-using System.Collections.ObjectModel;
+using ObservableCollections;
 
 namespace OneDesk.Models.Tasks;
 
 /// <summary>
 /// 用户任务队列
 /// </summary>
-public partial class UserTaskQueue : ObservableObject
+public partial class UserTaskQueue : ObservableObject, IDisposable
 {
     /// <summary>
     /// 用户信息
@@ -13,64 +13,60 @@ public partial class UserTaskQueue : ObservableObject
     public UserInfo UserInfo { get; }
 
     /// <summary>
-    /// 待处理任务列表（内部）
+    /// 待处理任务队列（内部）
     /// </summary>
-    private readonly ObservableCollection<TaskInfo> _pendingTasks = [];
+    private readonly ObservableQueue<TaskInfo> _pendingTasks = [];
+
+    /// <summary>
+    /// 运行中任务队列（内部）
+    /// </summary>
+    private readonly ObservableHashSet<TaskInfo> _runningTasks = [];
 
     /// <summary>
     /// 已完成任务列表（内部）
     /// </summary>
-    private readonly ObservableCollection<TaskInfo> _completedTasks = [];
+    private readonly ObservableList<TaskInfo> _completedTasks = [];
 
     /// <summary>
     /// 已取消任务列表（内部）
     /// </summary>
-    private readonly ObservableCollection<TaskInfo> _cancelledTasks = [];
+    private readonly ObservableList<TaskInfo> _cancelledTasks = [];
 
     /// <summary>
     /// 失败任务列表（内部）
     /// </summary>
-    private readonly ObservableCollection<TaskInfo> _failedTasks = [];
+    private readonly ObservableList<TaskInfo> _failedTasks = [];
 
     /// <summary>
-    /// 正在执行的任务数量
+    /// 待处理任务队列（只读视图）
     /// </summary>
-    public int RunningTaskCount
-    {
-        get;
-        private set
-        {
-            OnPropertyChanging();
-            field = value;
-            OnPropertyChanged();
-        }
-    }
+    public NotifyCollectionChangedSynchronizedViewList<TaskInfo> PendingTasks { get; }
 
     /// <summary>
-    /// 待处理任务列表（只读）
+    /// 运行中任务队列（只读视图）
     /// </summary>
-    public ReadOnlyObservableCollection<TaskInfo> PendingTasks { get; }
+    public NotifyCollectionChangedSynchronizedViewList<TaskInfo> RunningTasks { get; }
 
     /// <summary>
-    /// 已完成任务列表（只读）
+    /// 已完成任务列表（只读视图）
     /// </summary>
-    public ReadOnlyObservableCollection<TaskInfo> CompletedTasks { get; }
+    public NotifyCollectionChangedSynchronizedViewList<TaskInfo> CompletedTasks { get; }
 
     /// <summary>
-    /// 已取消任务列表（只读）
+    /// 已取消任务列表（只读视图）
     /// </summary>
-    public ReadOnlyObservableCollection<TaskInfo> CancelledTasks { get; }
+    public NotifyCollectionChangedSynchronizedViewList<TaskInfo> CancelledTasks { get; }
 
     /// <summary>
-    /// 失败任务列表（只读）
+    /// 失败任务列表（只读视图）
     /// </summary>
-    public ReadOnlyObservableCollection<TaskInfo> FailedTasks { get; }
+    public NotifyCollectionChangedSynchronizedViewList<TaskInfo> FailedTasks { get; }
 
     /// <summary>
     /// 当前查看的任务列表
     /// </summary>
     [ObservableProperty]
-    private ReadOnlyObservableCollection<TaskInfo>? _currentViewingTasks;
+    private NotifyCollectionChangedSynchronizedViewList<TaskInfo>? _currentViewingTasks;
 
     /// <summary>
     /// 当前查看的任务列表标题
@@ -87,19 +83,21 @@ public partial class UserTaskQueue : ObservableObject
     public UserTaskQueue(UserInfo userInfo)
     {
         UserInfo = userInfo;
-        PendingTasks = new ReadOnlyObservableCollection<TaskInfo>(_pendingTasks);
-        CompletedTasks = new ReadOnlyObservableCollection<TaskInfo>(_completedTasks);
-        CancelledTasks = new ReadOnlyObservableCollection<TaskInfo>(_cancelledTasks);
-        FailedTasks = new ReadOnlyObservableCollection<TaskInfo>(_failedTasks);
+        var current = SynchronizationContextCollectionEventDispatcher.Current;
+        PendingTasks = _pendingTasks.ToNotifyCollectionChanged(current);
+        RunningTasks = _runningTasks.ToNotifyCollectionChanged(current);
+        CompletedTasks = _completedTasks.ToNotifyCollectionChangedSlim(current);
+        CancelledTasks = _cancelledTasks.ToNotifyCollectionChangedSlim(current);
+        FailedTasks = _failedTasks.ToNotifyCollectionChangedSlim(current);
     }
 
     /// <summary>
-    /// 向待处理任务列表添加任务
+    /// 向待处理任务队列添加任务
     /// </summary>
     /// <param name="taskInfo">任务信息</param>
     public void AddPendingTask(TaskInfo taskInfo)
     {
-        _pendingTasks.Add(taskInfo);
+        _pendingTasks.Enqueue(taskInfo);
     }
 
     /// <summary>
@@ -108,6 +106,7 @@ public partial class UserTaskQueue : ObservableObject
     /// <param name="taskInfo">任务信息</param>
     public void AddCompletedTask(TaskInfo taskInfo)
     {
+        _runningTasks.Remove(taskInfo);
         switch (taskInfo.Status)
         {
             case TaskStatus.Completed:
@@ -124,25 +123,21 @@ public partial class UserTaskQueue : ObservableObject
             default:
                 throw new InvalidOperationException($"无法将状态为 {taskInfo.Status} 的任务添加到已结束任务列表");
         }
-        RunningTaskCount--;
     }
 
     /// <summary>
-    /// 移除并获取待处理任务列表的第一个元素
+    /// 移除并获取待处理任务队列的第一个元素
     /// </summary>
-    /// <returns>第一个待处理任务，如果列表为空则返回 null</returns>
+    /// <returns>第一个待处理任务，如果队列为空则返回 null</returns>
     public TaskInfo? DequeuePendingTask()
     {
-        if (_pendingTasks.Count == 0)
+        if (!_pendingTasks.TryDequeue(out var task))
         {
             return null;
         }
 
-        var task = _pendingTasks[0];
-        _pendingTasks.RemoveAt(0);
-
-        // 任务被取出准备执行，增加运行计数
-        RunningTaskCount++;
+        // 任务被取出准备执行，添加到运行中任务队列
+        _runningTasks.Add(task);
 
         return task;
     }
@@ -167,7 +162,7 @@ public partial class UserTaskQueue : ObservableObject
         var taskList = statusTag switch
         {
             "Pending" => PendingTasks,
-            "Running" => null, // 运行中的任务没有单独的列表
+            "Running" => RunningTasks, // 运行中的任务没有单独的列表
             "Completed" => CompletedTasks,
             "Cancelled" => CancelledTasks,
             "Failed" => FailedTasks,
@@ -186,7 +181,7 @@ public partial class UserTaskQueue : ObservableObject
         };
 
         // 如果点击的是当前正在查看的状态，则收起面板
-        if (IsTaskDetailsPanelVisible && CurrentViewingTasks == taskList)
+        if (IsTaskDetailsPanelVisible && ReferenceEquals(CurrentViewingTasks, taskList))
         {
             IsTaskDetailsPanelVisible = false;
             CurrentViewingTasks = null;
@@ -197,10 +192,20 @@ public partial class UserTaskQueue : ObservableObject
         // 更新当前查看的任务列表
         CurrentViewingTasks = taskList;
 
-        // 显示任务总数
+        // 显示标题
         CurrentViewingTitle = title;
 
         // 显示详情面板
         IsTaskDetailsPanelVisible = true;
+    }
+
+    public void Dispose()
+    {
+        PendingTasks.Dispose();
+        RunningTasks.Dispose();
+        CompletedTasks.Dispose();
+        CancelledTasks.Dispose();
+        FailedTasks.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

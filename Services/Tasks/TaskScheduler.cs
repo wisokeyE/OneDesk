@@ -28,7 +28,7 @@ public class TaskScheduler : ITaskScheduler
     /// <summary>
     /// 用户任务队列映射（用户ID -> UserTaskQueue）
     /// </summary>
-    public ConcurrentDictionary<int, UserTaskQueue> UserQueues { get; } = new();
+    public ConcurrentDictionary<long, UserTaskQueue> UserQueues { get; } = [];
 
     /// <summary>
     /// 最大并发协程数量
@@ -125,7 +125,7 @@ public class TaskScheduler : ITaskScheduler
     private void OnUserInfosChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         // 将处理逻辑调度到任务执行线程
-        _asyncContextThread.Factory.Run(async () =>
+        _asyncContextThread.Factory.Run(() =>
         {
             switch (e)
             {
@@ -194,10 +194,7 @@ public class TaskScheduler : ITaskScheduler
             }
 
             // 添加到用户的待处理队列，使用同步调度，确保更新用户队列时，不会有任务执行队列的并发修改问题
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                userQueue.AddPendingTask(taskInfo);
-            });
+            CommonUtils.RunOnUIThread(() => { userQueue.AddPendingTask(taskInfo); });
 
             // 添加到全局队列
             await _globalQueue.Writer.WriteAsync(taskInfo, _cancellationTokenSource.Token);
@@ -232,10 +229,7 @@ public class TaskScheduler : ITaskScheduler
                 if (!UserQueues.TryGetValue(userId, out var userQueue)) continue;
 
                 // 从用户队列中移除，使用同步调度，确保更新用户队列时，不会有任务执行队列的并发修改问题
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    userQueue.DequeuePendingTask();
-                });
+                CommonUtils.RunOnUIThread(() => { userQueue.DequeuePendingTask(); });
 
                 // 执行任务
                 await ExecuteTaskAsync(taskInfo);
@@ -277,10 +271,7 @@ public class TaskScheduler : ITaskScheduler
             {
                 if (addToCompletedQueue && UserQueues.TryGetValue(userId, out var cancelledUserQueue))
                 {
-                    await Application.Current.Dispatcher.InvokeAsync(() =>
-                    {
-                        cancelledUserQueue.AddCompletedTask(taskInfo);
-                    });
+                    await CommonUtils.RunOnUIThreadAsync(() => { cancelledUserQueue.AddCompletedTask(taskInfo); });
                 }
                 return;
             }
@@ -300,6 +291,7 @@ public class TaskScheduler : ITaskScheduler
             {
                 taskInfo.Status = TaskStatus.Completed;
                 taskInfo.EndTime = DateTime.Now;
+                taskInfo.Progress = taskInfo.Progress > 0 ? taskInfo.Progress : 100;
             });
         }
         catch (OperationCanceledException)
@@ -326,10 +318,7 @@ public class TaskScheduler : ITaskScheduler
             // 将任务移动到已结束队列（如果需要）
             if (addToCompletedQueue && UserQueues.TryGetValue(userId, out var userQueue))
             {
-                await Application.Current.Dispatcher.InvokeAsync(() =>
-                {
-                    userQueue.AddCompletedTask(taskInfo);
-                });
+                await CommonUtils.RunOnUIThreadAsync(() => { userQueue.AddCompletedTask(taskInfo); });
             }
         }
     }
@@ -389,6 +378,12 @@ public class TaskScheduler : ITaskScheduler
 
         // 释放防抖器
         _priorityTaskCompletedDebouncer.Dispose();
+
+        // 释放用户队列
+        foreach (var (_, userQueue) in UserQueues)
+        {
+            userQueue.Dispose();
+        }
 
         _cancellationTokenSource.Dispose();
         GC.SuppressFinalize(this);

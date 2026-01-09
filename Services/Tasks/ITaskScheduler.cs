@@ -11,7 +11,7 @@ public interface ITaskScheduler : IDisposable
     /// <summary>
     /// 用户任务队列映射（用户ID -> UserTaskQueue）
     /// </summary>
-    ConcurrentDictionary<int, UserTaskQueue> UserQueues { get; }
+    ConcurrentDictionary<long, UserTaskQueue> UserQueues { get; }
 
     /// <summary>
     /// 最大并发协程数量

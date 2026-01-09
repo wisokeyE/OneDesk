@@ -7,6 +7,7 @@ using Microsoft.Kiota.Abstractions;
 using Newtonsoft.Json;
 using OneDesk.Helpers;
 using OneDesk.Services.Tasks;
+using Application = System.Windows.Application;
 
 namespace OneDesk.Models.Tasks.Operations;
 
@@ -115,7 +116,7 @@ public class CopyOperation : ITaskOperation
                 {
                     // 复制操作异步进行，需轮询检查状态
                     var monitorUrl = responseMessage.Headers.Location ?? throw new InvalidOperationException("复制操作返回 202 Accepted，但未提供监控 URL");
-                    await MonitorCopy(monitorUrl, cancellationToken);
+                    await MonitorCopy(taskInfo, monitorUrl, cancellationToken);
                     break;
                 }
             case HttpStatusCode.Created:
@@ -184,7 +185,7 @@ public class CopyOperation : ITaskOperation
         }
     }
 
-    private async Task MonitorCopy(Uri monitorUrl, CancellationToken cancellationToken)
+    private async Task MonitorCopy(TaskInfo taskInfo, Uri monitorUrl, CancellationToken cancellationToken)
     {
         var result = await MonitorHttpClient.GetAsync(monitorUrl, cancellationToken);
 
@@ -196,6 +197,7 @@ public class CopyOperation : ITaskOperation
         var content = await result.Content.ReadAsStringAsync(cancellationToken);
         var dict = JsonConvert.DeserializeObject<IDictionary<string, object>>(content);
         var status = CommonUtils.GetValueOrDefault(dict, "status", "completed");
+        await UpdateProgress(taskInfo, CommonUtils.GetValueOrDefault(dict, "percentageComplete", 0.0));
 
         // 轮询检查任务状态
         while (status is "notStarted" or "inProgress" or "waiting")
@@ -211,6 +213,7 @@ public class CopyOperation : ITaskOperation
             content = await result.Content.ReadAsStringAsync(cancellationToken);
             dict = JsonConvert.DeserializeObject<IDictionary<string, object>>(content);
             status = CommonUtils.GetValueOrDefault(dict, "status", "completed");
+            await UpdateProgress(taskInfo, CommonUtils.GetValueOrDefault(dict, "percentageComplete", 0.0));
         }
 
         if (status == "failed")
@@ -223,5 +226,13 @@ public class CopyOperation : ITaskOperation
         {
             throw new InvalidOperationException($"复制任务结束，但状态异常: {status}");
         }
+    }
+
+    private static async Task UpdateProgress(TaskInfo taskInfo, double progress)
+    {
+        await Application.Current.Dispatcher.InvokeAsync(() =>
+        {
+            taskInfo.Progress = progress;
+        });
     }
 }

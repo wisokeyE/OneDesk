@@ -135,6 +135,30 @@ public class CommonUtils
         if (dict is null || !dict.TryGetValue(key, out var v)) return defaultValue;
         return v is not T value ? defaultValue : value;
     }
+
+    public static void RunOnUIThread(Action action)
+    {
+        if (Application.Current.Dispatcher.CheckAccess())
+        {
+            action();
+        }
+        else
+        {
+            Application.Current.Dispatcher.Invoke(action);
+        }
+    }
+
+    public static async Task RunOnUIThreadAsync(Action action)
+    {
+        if (Application.Current.Dispatcher.CheckAccess())
+        {
+            action();
+        }
+        else
+        {
+            await Application.Current.Dispatcher.InvokeAsync(action);
+        }
+    }
 }
 
 /// <summary>
