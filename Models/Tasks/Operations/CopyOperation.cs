@@ -112,12 +112,12 @@ public class CopyOperation : ITaskOperation
         switch (responseMessage.StatusCode)
         {
             case HttpStatusCode.Accepted:
-            {
-                // 复制操作异步进行，需轮询检查状态
-                var monitorUrl = responseMessage.Headers.Location ?? throw new InvalidOperationException("复制操作返回 202 Accepted，但未提供监控 URL");
-                await MonitorCopy(monitorUrl, cancellationToken);
-                break;
-            }
+                {
+                    // 复制操作异步进行，需轮询检查状态
+                    var monitorUrl = responseMessage.Headers.Location ?? throw new InvalidOperationException("复制操作返回 202 Accepted，但未提供监控 URL");
+                    await MonitorCopy(monitorUrl, cancellationToken);
+                    break;
+                }
             case HttpStatusCode.Created:
                 // 复制操作同步完成
                 break;

@@ -4,9 +4,6 @@ using System.Text;
 using Azure.Core;
 using Azure.Identity;
 using OneDesk.Helpers;
-using Wpf.Ui.Controls;
-using Application = System.Windows.Application;
-using MessageBox = Wpf.Ui.Controls.MessageBox;
 
 namespace OneDesk.Services.Auth;
 

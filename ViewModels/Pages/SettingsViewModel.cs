@@ -1,6 +1,6 @@
-﻿using Wpf.Ui.Abstractions.Controls;
+﻿using OneDesk.Models;
+using Wpf.Ui.Abstractions.Controls;
 using Wpf.Ui.Appearance;
-using OneDesk.Models;
 
 namespace OneDesk.ViewModels.Pages
 {

@@ -36,7 +36,7 @@ public partial class FileManagerPage : INavigableView<FileManagerViewModel>
         if (item.Folder is not null)
         {
             var currentFolder = ViewModel.CurrentFolder;
-            var newPath = Path.Combine(currentFolder.Path, item.Name!).Replace("\\","/");
+            var newPath = Path.Combine(currentFolder.Path, item.Name!).Replace("\\", "/");
             ViewModel.BreadcrumbItems.Add(new Item(item.Name!, newPath, currentFolder, item));
             _ = ViewModel.GetCurrentPathChildren();
         }

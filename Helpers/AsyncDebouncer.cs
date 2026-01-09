@@ -1,6 +1,6 @@
 ﻿namespace OneDesk.Helpers;
 
-public class AsyncDebouncer: IDisposable
+public class AsyncDebouncer : IDisposable
 {
     private readonly int _delayMs;
     private readonly int _maxWaitMs;
@@ -25,11 +25,11 @@ public class AsyncDebouncer: IDisposable
         _syncAction = syncAction ?? throw new ArgumentNullException(nameof(syncAction));
     }
 
-    public AsyncDebouncer(int delayMs, Func<Task> asyncAction): this(delayMs, 0, asyncAction)
+    public AsyncDebouncer(int delayMs, Func<Task> asyncAction) : this(delayMs, 0, asyncAction)
     {
     }
 
-    public AsyncDebouncer(int delayMs, Action syncAction): this(delayMs, 0, syncAction)
+    public AsyncDebouncer(int delayMs, Action syncAction) : this(delayMs, 0, syncAction)
     {
     }
 

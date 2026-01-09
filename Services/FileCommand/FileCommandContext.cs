@@ -48,7 +48,7 @@ public class FileCommandContext
     /// <param name="currentFolder">当前文件夹</param>
     /// <param name="userInfo">用户信息</param>
     /// <param name="parameters">附加参数</param>
-    public FileCommandContext(IReadOnlyList<DriveItem> selectedItems, DriveItem? currentFolder, UserInfo userInfo, Dictionary<string, object> parameters): this(selectedItems, currentFolder, userInfo)
+    public FileCommandContext(IReadOnlyList<DriveItem> selectedItems, DriveItem? currentFolder, UserInfo userInfo, Dictionary<string, object> parameters) : this(selectedItems, currentFolder, userInfo)
     {
         Parameters = parameters;
     }

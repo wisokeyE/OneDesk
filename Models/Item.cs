@@ -2,9 +2,9 @@
 
 namespace OneDesk.Models;
 
-public class Item(string name, string path, Item? parentFolder, DriveItem? driveItem): IEquatable<Item>
+public class Item(string name, string path, Item? parentFolder, DriveItem? driveItem) : IEquatable<Item>
 {
-    public Item(string name, string path, Item? parentFolder): this(name, path, parentFolder, null)
+    public Item(string name, string path, Item? parentFolder) : this(name, path, parentFolder, null)
     {
     }
 
