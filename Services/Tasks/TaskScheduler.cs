@@ -155,6 +155,7 @@ public class TaskScheduler : ITaskScheduler
                                 // 取消所有待处理任务
                                 CancelAllPendingTasks(userQueue);
                                 userInfo.TaskQueue = null; // 清理引用，将之前的循环引用断开
+                                userQueue.Dispose();
                             }
                         });
 

@@ -3,6 +3,7 @@ using System.Windows.Threading;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using OneDesk.Models.Tasks;
 using OneDesk.Services;
 using OneDesk.Services.Auth;
 using OneDesk.Services.Clipboard;
@@ -78,6 +79,16 @@ namespace OneDesk
 
                 // HttpClient for monitoring copy operations
                 services.AddHttpClient("MonitorCopy");
+
+                // 自动注册所有 ITaskOperation 的实现（单例）
+                var opInterfaceType = typeof(ITaskOperation);
+                var opTypes = opInterfaceType.Assembly.DefinedTypes
+                    .Where(type => type is { IsAbstract: false, IsInterface: false } && opInterfaceType.IsAssignableFrom(type))
+                    .Select(type => type.AsType());
+                foreach (var type in opTypes)
+                {
+                    services.AddSingleton(type);
+                }
 
                 services.AddSingleton<FileManagerPage>();
                 services.AddSingleton<FileManagerViewModel>();

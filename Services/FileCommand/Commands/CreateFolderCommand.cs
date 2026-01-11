@@ -3,8 +3,8 @@ using Microsoft.Graph.Models;
 using OneDesk.Helpers;
 using OneDesk.Models;
 using OneDesk.Models.Tasks;
-using OneDesk.Models.Tasks.Operations;
 using OneDesk.Services.Tasks;
+using OneDesk.Services.Tasks.Operations;
 
 namespace OneDesk.Services.FileCommand.Commands;
 
@@ -15,6 +15,7 @@ public class CreateFolderCommand(IServiceProvider serviceProvider) : IFileComman
 {
     private ITaskScheduler TaskScheduler => field ??= serviceProvider.GetRequiredService<ITaskScheduler>();
     private AppConfig Config => field ??= serviceProvider.GetRequiredService<AppConfig>();
+    private CreateFolderOperation CreateFolderOp => field ??= serviceProvider.GetRequiredService<CreateFolderOperation>();
 
     public string Name => "新建文件夹";
 
@@ -64,7 +65,7 @@ public class CreateFolderCommand(IServiceProvider serviceProvider) : IFileComman
         };
 
         // 创建任务，DestinationItem 为父文件夹，SourceItem 存储新文件夹名称
-        var taskInfo = new TaskInfo(context.UserInfo, CreateFolderOperation.Instance, newFolderItem, context.CurrentFolder, extraData);
+        var taskInfo = new TaskInfo(context.UserInfo, CreateFolderOp, newFolderItem, context.CurrentFolder, extraData);
 
         await TaskScheduler.AddPriorityTaskAsync(taskInfo);
     }

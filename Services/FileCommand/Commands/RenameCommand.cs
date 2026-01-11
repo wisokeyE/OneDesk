@@ -2,8 +2,8 @@ using Microsoft.Extensions.DependencyInjection;
 using OneDesk.Helpers;
 using OneDesk.Models;
 using OneDesk.Models.Tasks;
-using OneDesk.Models.Tasks.Operations;
 using OneDesk.Services.Tasks;
+using OneDesk.Services.Tasks.Operations;
 
 namespace OneDesk.Services.FileCommand.Commands;
 
@@ -13,8 +13,8 @@ namespace OneDesk.Services.FileCommand.Commands;
 public class RenameCommand(IServiceProvider serviceProvider) : IFileCommand
 {
     private ITaskScheduler TaskScheduler => field ??= serviceProvider.GetRequiredService<ITaskScheduler>();
-
     private AppConfig Config => field ??= serviceProvider.GetRequiredService<AppConfig>();
+    private MoveOperation MoveOp => field ??= serviceProvider.GetRequiredService<MoveOperation>();
 
     public string Name => "重命名";
 
@@ -69,7 +69,7 @@ public class RenameCommand(IServiceProvider serviceProvider) : IFileCommand
 
         // 创建任务，复用 MoveOperation
         // SourceItem 为要重命名的项，DestinationItem 为其父文件夹（保持在原位置）
-        var taskInfo = new TaskInfo(context.UserInfo, MoveOperation.Instance, selectedItem, context.CurrentFolder, extraData);
+        var taskInfo = new TaskInfo(context.UserInfo, MoveOp, selectedItem, context.CurrentFolder, extraData);
 
         await TaskScheduler.AddPriorityTaskAsync(taskInfo);
     }

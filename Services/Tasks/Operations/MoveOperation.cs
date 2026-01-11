@@ -1,24 +1,14 @@
 using Microsoft.Graph.Models;
 using OneDesk.Helpers;
+using OneDesk.Models.Tasks;
 
-namespace OneDesk.Models.Tasks.Operations;
+namespace OneDesk.Services.Tasks.Operations;
 
 /// <summary>
 /// 移动操作类（单例模式）
 /// </summary>
 public class MoveOperation : ITaskOperation
 {
-    private static readonly Lazy<MoveOperation> _instance = new(() => new MoveOperation());
-
-    /// <summary>
-    /// 获取移动操作的单例实例
-    /// </summary>
-    public static MoveOperation Instance => _instance.Value;
-
-    private MoveOperation()
-    {
-    }
-
     private static readonly Dictionary<string, object> EmptyDictionary = [];
 
     /// <summary>

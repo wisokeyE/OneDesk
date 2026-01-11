@@ -1,23 +1,13 @@
 using OneDesk.Helpers;
+using OneDesk.Models.Tasks;
 
-namespace OneDesk.Models.Tasks.Operations;
+namespace OneDesk.Services.Tasks.Operations;
 
 /// <summary>
 /// 删除操作类（单例模式）
 /// </summary>
 public class DeleteOperation : ITaskOperation
 {
-    private static readonly Lazy<DeleteOperation> _instance = new(() => new DeleteOperation());
-
-    /// <summary>
-    /// 获取删除操作的单例实例
-    /// </summary>
-    public static DeleteOperation Instance => _instance.Value;
-
-    private DeleteOperation()
-    {
-    }
-
     /// <summary>
     /// 操作名称
     /// </summary>

@@ -6,31 +6,20 @@ using Microsoft.Graph.Models;
 using Microsoft.Kiota.Abstractions;
 using Newtonsoft.Json;
 using OneDesk.Helpers;
-using OneDesk.Services.Tasks;
+using OneDesk.Models.Tasks;
 using Application = System.Windows.Application;
 
-namespace OneDesk.Models.Tasks.Operations;
+namespace OneDesk.Services.Tasks.Operations;
 
 /// <summary>
 /// 复制操作类（单例模式）
 /// </summary>
-public class CopyOperation : ITaskOperation
+public class CopyOperation(IServiceProvider serviceProvider) : ITaskOperation
 {
-    private static readonly Lazy<CopyOperation> _instance = new(() => new CopyOperation());
-
-    /// <summary>
-    /// 获取复制操作的单例实例
-    /// </summary>
-    public static CopyOperation Instance => _instance.Value;
-
-    private CopyOperation()
-    {
-    }
-
     private static readonly Dictionary<string, object> EmptyDictionary = [];
 
-    private ITaskScheduler TaskScheduler => field ??= App.Services.GetRequiredService<ITaskScheduler>();
-    private HttpClient MonitorHttpClient => field ??= App.Services.GetRequiredService<IHttpClientFactory>().CreateClient("MonitorCopy");
+    private ITaskScheduler TaskScheduler => field ??= serviceProvider.GetRequiredService<ITaskScheduler>();
+    private HttpClient MonitorHttpClient => field ??= serviceProvider.GetRequiredService<IHttpClientFactory>().CreateClient("MonitorCopy");
 
     /// <summary>
     /// 操作名称
@@ -180,7 +169,7 @@ public class CopyOperation : ITaskOperation
         // 遍历源文件夹的所有子项，为每个子项创建复制任务
         foreach (var childItem in sourceChildren.Value)
         {
-            var childTaskInfo = new TaskInfo(taskInfo.UserInfo, Instance, childItem, targetFolder, taskInfo.ExtraData);
+            var childTaskInfo = new TaskInfo(taskInfo.UserInfo, this, childItem, targetFolder, taskInfo.ExtraData);
             await TaskScheduler.AddTaskAsync(childTaskInfo);
         }
     }

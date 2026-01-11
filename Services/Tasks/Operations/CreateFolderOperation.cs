@@ -1,24 +1,14 @@
 using Microsoft.Graph.Models;
 using OneDesk.Helpers;
+using OneDesk.Models.Tasks;
 
-namespace OneDesk.Models.Tasks.Operations;
+namespace OneDesk.Services.Tasks.Operations;
 
 /// <summary>
 /// 新建文件夹操作类（单例模式）
 /// </summary>
 public class CreateFolderOperation : ITaskOperation
 {
-    private static readonly Lazy<CreateFolderOperation> _instance = new(() => new CreateFolderOperation());
-
-    /// <summary>
-    /// 获取新建文件夹操作的单例实例
-    /// </summary>
-    public static CreateFolderOperation Instance => _instance.Value;
-
-    private CreateFolderOperation()
-    {
-    }
-
     private static readonly Dictionary<string, object> EmptyDictionary = [];
 
     /// <summary>

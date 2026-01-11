@@ -1,9 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using OneDesk.Models;
 using OneDesk.Models.Tasks;
-using OneDesk.Models.Tasks.Operations;
 using OneDesk.Services.Clipboard;
 using OneDesk.Services.Tasks;
+using OneDesk.Services.Tasks.Operations;
 
 namespace OneDesk.Services.FileCommand.Commands;
 
@@ -15,6 +15,8 @@ public class PasteCommand(IServiceProvider serviceProvider) : IFileCommand
     private IClipboardService ClipboardService => field ??= serviceProvider.GetRequiredService<IClipboardService>();
     private ITaskScheduler TaskScheduler => field ??= serviceProvider.GetRequiredService<ITaskScheduler>();
     private AppConfig Config => field ??= serviceProvider.GetRequiredService<AppConfig>();
+    private CopyOperation CopyOp => field ??= serviceProvider.GetRequiredService<CopyOperation>();
+    private MoveOperation MoveOp => field ??= serviceProvider.GetRequiredService<MoveOperation>();
 
     public string Name => "粘贴";
 
@@ -43,9 +45,7 @@ public class PasteCommand(IServiceProvider serviceProvider) : IFileCommand
         };
 
         // 根据剪切板模式选择操作类型
-        ITaskOperation operation = ClipboardService.Mode == ClipboardMode.Copy
-            ? CopyOperation.Instance
-            : MoveOperation.Instance;
+        ITaskOperation operation = ClipboardService.Mode == ClipboardMode.Copy ? CopyOp : MoveOp;
 
         // 为剪切板中的每个项目创建任务
         foreach (var item in ClipboardService.Items)

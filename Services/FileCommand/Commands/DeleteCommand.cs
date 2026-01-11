@@ -1,8 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using OneDesk.Helpers;
 using OneDesk.Models.Tasks;
-using OneDesk.Models.Tasks.Operations;
 using OneDesk.Services.Tasks;
+using OneDesk.Services.Tasks.Operations;
 using MessageBoxResult = Wpf.Ui.Controls.MessageBoxResult;
 
 namespace OneDesk.Services.FileCommand.Commands;
@@ -13,6 +13,7 @@ namespace OneDesk.Services.FileCommand.Commands;
 public class DeleteCommand(IServiceProvider serviceProvider) : IFileCommand
 {
     private ITaskScheduler TaskScheduler => field ??= serviceProvider.GetRequiredService<ITaskScheduler>();
+    private DeleteOperation DeleteOp => field ??= serviceProvider.GetRequiredService<DeleteOperation>();
 
     public string Name => "删除";
 
@@ -46,7 +47,7 @@ public class DeleteCommand(IServiceProvider serviceProvider) : IFileCommand
         // 通过 TaskScheduler 为每个选中的项创建删除任务
         foreach (var item in context.SelectedItems)
         {
-            var taskInfo = new TaskInfo(context.UserInfo, DeleteOperation.Instance, item);
+            var taskInfo = new TaskInfo(context.UserInfo, DeleteOp, item);
             await TaskScheduler.AddTaskAsync(taskInfo);
         }
     }

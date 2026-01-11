@@ -1,4 +1,3 @@
-using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace OneDesk.Services.FileCommand;
@@ -30,17 +29,11 @@ public class FileCommandRegistry : IFileCommandRegistry
     /// </summary>
     private void RegisterDefaultCommands()
     {
-        // 获取当前程序集
-        var assembly = Assembly.GetExecutingAssembly();
-
-        // 定义目标命名空间常量，避免重复字符串比较
-        const string targetNamespace = "OneDesk.Services.FileCommand.Commands";
         var commandInterfaceType = typeof(IFileCommand);
 
         // 扫描并过滤类型，将最快的条件前置
-        var commandTypes = assembly.DefinedTypes
-            .Where(type => type is { IsAbstract: false, IsInterface: false, Namespace: targetNamespace } &&
-                           commandInterfaceType.IsAssignableFrom(type))
+        var commandTypes = commandInterfaceType.Assembly.DefinedTypes
+            .Where(type => type is { IsAbstract: false, IsInterface: false } && commandInterfaceType.IsAssignableFrom(type))
             .Select(type => type.AsType());
 
         // 实例化所有命令
