@@ -12,6 +12,8 @@ namespace OneDesk.ViewModels.Pages;
 
 public partial class FileManagerViewModel : ObservableObject
 {
+    private static readonly Item DefaultItem = new("/", "/", null);
+
     [ObservableProperty]
     private ObservableCollection<DriveItem> _items = [];
 
@@ -19,7 +21,7 @@ public partial class FileManagerViewModel : ObservableObject
     private ObservableCollection<DriveItem> _selectedItems = [];
 
     [ObservableProperty]
-    private ObservableCollection<Item> _breadcrumbItems = [new("/", "/", null)];
+    private ObservableCollection<Item> _breadcrumbItems = [DefaultItem];
 
     [ObservableProperty]
     private bool _isLoading;
@@ -81,7 +83,7 @@ public partial class FileManagerViewModel : ObservableObject
         _userInfoManager.PropertyChanged += (v, e) =>
         {
             if (e.PropertyName != nameof(IUserInfoManager.ActivatedUserInfo)) return;
-            BreadcrumbItems = [UserInfoManager.ActivatedUserInfo!.RootItem!];
+            BreadcrumbItems = [UserInfoManager.ActivatedUserInfo!.RootItem ?? DefaultItem];
             RootIndex = 0;
             _ = GetCurrentPathChildren();
         };

@@ -1,13 +1,10 @@
 ﻿using System.Collections.ObjectModel;
-using System.IO;
-using System.Net.Http;
 using System.Windows.Media.Imaging;
 using Azure.Core;
 using Microsoft.Graph;
 using OneDesk.Helpers;
-using OneDesk.Helpers.Dicebear;
 using OneDesk.Models.Tasks;
-using SharpVectors.Renderers.Wpf;
+using OneDesk.Services.Avatar;
 
 namespace OneDesk.Models;
 
@@ -22,9 +19,6 @@ public partial class UserInfo : ObservableObject, IDisposable
 
     [ObservableProperty]
     private string _mail = "未知邮箱";
-
-    [ObservableProperty]
-    private string? _photoUrl;
 
     [ObservableProperty]
     private bool _isSvg;
@@ -45,7 +39,7 @@ public partial class UserInfo : ObservableObject, IDisposable
     private Item? _rootItem;
 
     [ObservableProperty]
-    private ObservableCollection<Item> _sharedWithMeItems = new();
+    private ObservableCollection<Item> _sharedWithMeItems = [];
 
     [ObservableProperty]
     private UserTaskQueue? _taskQueue;
@@ -67,16 +61,11 @@ public partial class UserInfo : ObservableObject, IDisposable
 
     private async Task InitUserInfoAsync()
     {
-        var displayName = DisplayName;
-        var mail = Mail;
-        var driveId = "";
-        Item? rootItem = null;
-        var isSvg = IsSvg;
-        var photoUrl = PhotoUrl;
-        var svgContent = "";
         try
         {
             var me = await Client.Me.GetAsync();
+            var displayName = DisplayName;
+            var mail = Mail;
             if (me is not null)
             {
                 displayName = me.DisplayName!;
@@ -84,31 +73,17 @@ public partial class UserInfo : ObservableObject, IDisposable
             }
 
             var drive = await Client.Me.Drive.GetAsync();
+            var driveId = "";
             if (drive is not null)
             {
                 driveId = drive.Id;
             }
 
+            Item? rootItem = null;
             if (!string.IsNullOrEmpty(driveId))
             {
                 var root = await Client.Drives[driveId].Root.GetAsync();
                 rootItem = new Item("/", "/", null, root);
-            }
-
-            try
-            {
-                var photo = await Client.Me.Photo.GetAsync();
-                photoUrl = photo?.Id;
-            }
-            catch (Exception)
-            {
-                //ignored
-            }
-
-            if (string.IsNullOrWhiteSpace(photoUrl))
-            {
-                isSvg = true;
-                svgContent = InitialsGenerator.GenerateSvg(displayName);
             }
 
             await Application.Current.Dispatcher.InvokeAsync(() =>
@@ -118,60 +93,19 @@ public partial class UserInfo : ObservableObject, IDisposable
                 Mail = mail;
                 DriveId = driveId;
                 RootItem = rootItem;
-                IsSvg = isSvg;
-                PhotoUrl = photoUrl;
                 IsUserInitialized = true;
                 _ = RefreshSharedWithMeItemsAsync();
             });
 
-            // 缓存图片到内存流中
+            // 获取用户头像，放在最后执行，避免头像加载失败影响其他信息的初始化
             try
             {
-                MemoryStream memoryStream;
-                if (string.IsNullOrWhiteSpace(svgContent))
+                var (isSvg, image) = await CommonUtils.GetRequiredService<IAvatarService>().GetUserImageAsync(Client, displayName);
+                await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    // 从网络下载图片
-                    using var httpClient = new HttpClient();
-                    var response = await httpClient.GetByteArrayAsync(photoUrl);
-                    memoryStream = new MemoryStream(response);
-                }
-                else
-                {
-                    // 使用本地生成的 SVG
-                    memoryStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(svgContent));
-                }
-
-                using (memoryStream)
-                {
-                    var image = new BitmapImage();
-                    if (isSvg)
-                    {
-                        var settings = new WpfDrawingSettings
-                        {
-                            IncludeRuntime = true,
-                            TextAsGeometry = false
-                        };
-                        var converter = new SharpVectors.Converters.StreamSvgConverter(settings);
-                        using var imageStream = new MemoryStream();
-                        converter.Convert(memoryStream, imageStream);
-                        image.BeginInit();
-                        image.CacheOption = BitmapCacheOption.OnLoad;
-                        image.StreamSource = imageStream;
-                        image.EndInit();
-                    }
-                    else
-                    {
-                        image.BeginInit();
-                        image.CacheOption = BitmapCacheOption.OnLoad;
-                        image.StreamSource = memoryStream;
-                        image.EndInit();
-                    }
-                    image.Freeze();
-                    await Application.Current.Dispatcher.InvokeAsync(() =>
-                    {
-                        PhotoBitmap = image;
-                    });
-                }
+                    IsSvg = isSvg;
+                    PhotoBitmap = image;
+                });
             }
             catch (Exception)
             {

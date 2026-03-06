@@ -3,7 +3,7 @@ using System.Windows.Data;
 
 namespace OneDesk.Helpers.Converters;
 
-internal class EnumToBooleanConverter : IValueConverter
+public class EnumToBooleanConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {

@@ -3,12 +3,15 @@ using System.Windows.Threading;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using OneDesk.Helpers;
 using OneDesk.Models.Tasks;
 using OneDesk.Services;
 using OneDesk.Services.Auth;
+using OneDesk.Services.Avatar;
 using OneDesk.Services.Clipboard;
 using OneDesk.Services.Configuration;
 using OneDesk.Services.FileCommand;
+using OneDesk.Services.Permissions;
 using OneDesk.Services.Tasks;
 using OneDesk.ViewModels.Pages;
 using OneDesk.ViewModels.Windows;
@@ -65,6 +68,13 @@ namespace OneDesk
                 services.AddSingleton<FileDetailsWindow>();
                 services.AddSingleton<FileDetailsWindowViewModel>();
 
+                // Permission Manager Window
+                services.AddSingleton<PermissionManagerWindow>();
+                services.AddSingleton<PermissionManagerWindowViewModel>();
+
+                // Permission Service
+                services.AddSingleton<IPermissionService, PermissionService>();
+
                 // User Info management
                 services.AddSingleton<IUserInfoManager, UserInfoManager>();
 
@@ -76,6 +86,9 @@ namespace OneDesk
 
                 // File Command Registry
                 services.AddSingleton<IFileCommandRegistry, FileCommandRegistry>();
+
+                // Avatar Service
+                services.AddSingleton<IAvatarService, AvatarService>();
 
                 // HttpClient for monitoring copy operations
                 services.AddHttpClient("MonitorCopy");
@@ -108,6 +121,7 @@ namespace OneDesk
         /// </summary>
         private async void OnStartup(object sender, StartupEventArgs e)
         {
+            CommonUtils.SetServiceProvider(_host.Services);
             await _host.StartAsync();
         }
 

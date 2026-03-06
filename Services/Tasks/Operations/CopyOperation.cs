@@ -19,7 +19,7 @@ public class CopyOperation(IServiceProvider serviceProvider) : ITaskOperation
     private static readonly Dictionary<string, object> EmptyDictionary = [];
 
     private ITaskScheduler TaskScheduler => field ??= serviceProvider.GetRequiredService<ITaskScheduler>();
-    private HttpClient MonitorHttpClient => field ??= serviceProvider.GetRequiredService<IHttpClientFactory>().CreateClient("MonitorCopy");
+    private IHttpClientFactory HttpClientFactory => field ??= serviceProvider.GetRequiredService<IHttpClientFactory>();
 
     /// <summary>
     /// 操作名称
@@ -176,7 +176,8 @@ public class CopyOperation(IServiceProvider serviceProvider) : ITaskOperation
 
     private async Task MonitorCopy(TaskInfo taskInfo, Uri monitorUrl, CancellationToken cancellationToken)
     {
-        var result = await MonitorHttpClient.GetAsync(monitorUrl, cancellationToken);
+        var monitorHttpClient = HttpClientFactory.CreateClient("MonitorCopy");
+        var result = await monitorHttpClient.GetAsync(monitorUrl, cancellationToken);
 
         if (!result.IsSuccessStatusCode)
         {
@@ -193,7 +194,7 @@ public class CopyOperation(IServiceProvider serviceProvider) : ITaskOperation
         {
             await Task.Delay(200, cancellationToken);
 
-            result = await MonitorHttpClient.GetAsync(monitorUrl, cancellationToken);
+            result = await monitorHttpClient.GetAsync(monitorUrl, cancellationToken);
             if (!result.IsSuccessStatusCode)
             {
                 throw new InvalidOperationException($"监控复制任务失败，HTTP 状态码: {result.StatusCode}");

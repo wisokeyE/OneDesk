@@ -1,4 +1,5 @@
-﻿using Microsoft.Graph.Models;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Graph.Models;
 using Wpf.Ui.Controls;
 using Application = System.Windows.Application;
 using MessageBox = Wpf.Ui.Controls.MessageBox;
@@ -8,6 +9,20 @@ namespace OneDesk.Helpers;
 
 public class CommonUtils
 {
+    private static IServiceProvider? _serviceProvider;
+
+    public static void SetServiceProvider(IServiceProvider sp)
+    {
+        // 只允许设置一次 ServiceProvider，后续调用将被忽略
+        if (_serviceProvider is not null) return;
+        _serviceProvider = sp;
+    }
+
+    public static T GetRequiredService<T>() where T : notnull
+    {
+        return _serviceProvider!.GetRequiredService<T>();
+    }
+
     public static async Task ShowMessageBoxAsync(string title, string message)
     {
         await ShowMessageBoxAsync(title, message, CancellationToken.None);

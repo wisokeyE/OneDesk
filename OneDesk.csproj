@@ -11,13 +11,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Services\新文件夹\**" />
-    <EmbeddedResource Remove="Services\新文件夹\**" />
-    <None Remove="Services\新文件夹\**" />
-    <Page Remove="Services\新文件夹\**" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Content Include="wpfui-icon.ico" />
   </ItemGroup>
 
