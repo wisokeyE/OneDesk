@@ -24,7 +24,7 @@ public class AvatarService(IUserInfoManager manager) : IAvatarService
                     ? await client.Me.Photo.Content.GetAsync()
                     : await client.Users[userId].Photo.Content.GetAsync();
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 //ignored
             }
